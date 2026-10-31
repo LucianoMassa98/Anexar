@@ -126,3 +126,4 @@ export class MySqlAdapter implements DatabaseAdapter {
     }
   }
 }
+

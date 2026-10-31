@@ -11,7 +11,9 @@ import {
   Table as TableIcon,
   Trash2,
   UploadCloud,
+  Layers,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useConnectionStore } from '../../store/useConnectionStore';
 
 interface ConnectionModalProps {
@@ -19,12 +21,20 @@ interface ConnectionModalProps {
   onClose: () => void;
 }
 
+interface SheetDetail {
+  name: string;
+  headers: string[];
+  rows: string[][];
+  totalRows: number;
+  totalCols: number;
+}
+
 interface PreviewFileData {
   name: string;
   size: number;
   type: 'csv' | 'excel';
-  headers: string[];
-  rows: string[][];
+  sheets: SheetDetail[];
+  activeSheetIndex: number;
 }
 
 export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClose }) => {
@@ -94,56 +104,109 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
     }
   };
 
-  const handlePreviewFile = (file: File) => {
-    const isCsv = file.name.toLowerCase().endsWith('.csv');
-    if (isCsv) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = (e.target?.result as string) || '';
+  const handlePreviewFile = async (file: File) => {
+    try {
+      const lowerName = file.name.toLowerCase();
+      const isCsv = lowerName.endsWith('.csv');
+
+      if (isCsv) {
+        const text = await file.text();
         const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+        let headers: string[] = [];
+        let rows: string[][] = [];
+
         if (lines.length > 0) {
           const delimiter = lines[0].includes(';') ? ';' : ',';
-          const headers = lines[0].split(delimiter).map((h) => h.trim().replace(/^"|"$/g, ''));
-          const rows = lines.slice(1, 9).map((line) =>
+          headers = lines[0].split(delimiter).map((h) => h.trim().replace(/^"|"$/g, ''));
+          rows = lines.slice(1, 11).map((line) =>
             line.split(delimiter).map((cell) => cell.trim().replace(/^"|"$/g, ''))
           );
-          setPreviewFile({
-            name: file.name,
-            size: file.size,
-            type: 'csv',
-            headers,
-            rows,
-          });
         } else {
-          setPreviewFile({
-            name: file.name,
-            size: file.size,
-            type: 'csv',
-            headers: ['Contenido'],
-            rows: [['(Archivo CSV sin registros)']],
-          });
+          headers = ['Contenido'];
+          rows = [['(Archivo CSV sin registros)']];
         }
-      };
-      reader.readAsText(file);
-    } else {
-      // Excel File metadata preview
-      setPreviewFile({
-        name: file.name,
-        size: file.size,
-        type: 'excel',
-        headers: ['Propiedad', 'Detalle'],
-        rows: [
-          ['Nombre del Archivo', file.name],
-          [
-            'Formato',
-            file.name.toLowerCase().endsWith('.xlsx')
-              ? 'Hoja de Cálculo Excel OpenXML (.xlsx)'
-              : 'Libro Excel 97-2004 (.xls)',
+
+        const tableName = file.name.replace(/\.csv$/i, '');
+        setPreviewFile({
+          name: file.name,
+          size: file.size,
+          type: 'csv',
+          sheets: [
+            {
+              name: tableName,
+              headers,
+              rows,
+              totalRows: Math.max(0, lines.length - 1),
+              totalCols: headers.length,
+            },
           ],
-          ['Tamaño en Memoria', `${(file.size / 1024).toFixed(1)} KB`],
-          ['Motor de Procesamiento', 'SQLite WebAssembly en RAM volátil (Zero-Retention)'],
-        ],
-      });
+          activeSheetIndex: 0,
+        });
+      } else {
+        // Excel file (.xlsx / .xls)
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheets: SheetDetail[] = workbook.SheetNames.map((sheetName) => {
+          const worksheet = workbook.Sheets[sheetName];
+          const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1,
+            defval: '',
+          });
+
+          if (!rawRows || rawRows.length === 0) {
+            return {
+              name: sheetName,
+              headers: ['(Hoja vacía)'],
+              rows: [],
+              totalRows: 0,
+              totalCols: 0,
+            };
+          }
+
+          const rawHeaders = (rawRows[0] || []).map((h: any, idx: number) => {
+            const str = String(h ?? '').trim();
+            return str || `Columna_${idx + 1}`;
+          });
+
+          const sampleRows = rawRows.slice(1, 11).map((row: any[]) => {
+            const rowArr: string[] = [];
+            for (let c = 0; c < rawHeaders.length; c++) {
+              const val = row && row[c] !== undefined && row[c] !== null ? String(row[c]) : '';
+              rowArr.push(val);
+            }
+            return rowArr;
+          });
+
+          return {
+            name: sheetName,
+            headers: rawHeaders,
+            rows: sampleRows,
+            totalRows: Math.max(0, rawRows.length - 1),
+            totalCols: rawHeaders.length,
+          };
+        });
+
+        setPreviewFile({
+          name: file.name,
+          size: file.size,
+          type: 'excel',
+          sheets:
+            sheets.length > 0
+              ? sheets
+              : [
+                  {
+                    name: 'Hoja 1',
+                    headers: ['(Sin datos)'],
+                    rows: [],
+                    totalRows: 0,
+                    totalCols: 0,
+                  },
+                ],
+          activeSheetIndex: 0,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error al previsualizar archivo:', err);
     }
   };
 
@@ -308,15 +371,15 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          {/* "Ver" Button */}
+                          {/* "Ver detalle" Button */}
                           <button
                             type="button"
                             onClick={() => handlePreviewFile(f)}
                             className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-500/30 shadow-sm"
-                            title="Previsualizar registros del archivo"
+                            title="Ver detalle del archivo y hojas"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            <span>Ver</span>
+                            <span>Ver detalle</span>
                           </button>
 
                           {/* "Eliminar" Button */}
@@ -347,55 +410,160 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
                 </div>
               )}
 
-              {/* In-Modal File Preview Area */}
+              {/* In-Modal File Preview / Detail Area */}
               {previewFile && (
-                <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-blue-500/40 space-y-3 shadow-xl">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0 mr-2">
-                      <TableIcon className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span className="text-xs font-bold text-white truncate">
-                        Vista Previa: <span className="font-mono text-blue-300">{previewFile.name}</span>
-                      </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-500/30 uppercase shrink-0">
-                        {previewFile.type}
-                      </span>
+                <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-blue-500/40 space-y-3.5 shadow-xl">
+                  {/* Top Bar of Detail View */}
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                    <div className="flex items-center gap-2.5 min-w-0 mr-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30">
+                        {previewFile.type === 'excel' ? (
+                          <Layers className="w-4 h-4" />
+                        ) : (
+                          <TableIcon className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white truncate">
+                            Detalle: <span className="font-mono text-blue-300">{previewFile.name}</span>
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-900/40 text-blue-300 border border-blue-500/30 uppercase shrink-0">
+                            {previewFile.type === 'excel'
+                              ? `Excel • ${previewFile.sheets.length} hoja(s)`
+                              : 'CSV • 1 tabla'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPreviewFile(null)}
-                      className="text-xs text-slate-400 hover:text-white cursor-pointer px-2 py-1 rounded hover:bg-slate-800 shrink-0 transition-colors"
+                      className="text-xs text-slate-400 hover:text-white cursor-pointer px-2.5 py-1 rounded-lg hover:bg-slate-800 shrink-0 transition-colors border border-transparent hover:border-slate-700"
                     >
-                      Cerrar Vista
+                      Cerrar detalle
                     </button>
                   </div>
 
-                  <div className="overflow-x-auto max-h-48 rounded-lg border border-slate-800">
-                    <table className="w-full text-left text-[11px] text-slate-300">
-                      <thead className="bg-slate-900 uppercase font-semibold text-slate-400 tracking-wider sticky top-0">
-                        <tr>
-                          {previewFile.headers.map((h, hIdx) => (
-                            <th key={hIdx} className="px-3 py-2 border-b border-slate-800 whitespace-nowrap">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/80 bg-slate-950 font-mono">
-                        {previewFile.rows.map((row, rIdx) => (
-                          <tr key={rIdx} className="hover:bg-slate-900/60">
-                            {row.map((cell, cIdx) => (
-                              <td key={cIdx} className="px-3 py-1.5 whitespace-nowrap">
-                                {cell || '-'}
-                              </td>
+                  {/* Sheet tabs for Excel or Single Table Banner for CSV */}
+                  {previewFile.type === 'excel' ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Hojas de cálculo detectadas ({previewFile.sheets.length}):</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Seleccione una hoja para inspeccionar:
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                        {previewFile.sheets.map((sheet, sIdx) => {
+                          const isActive = previewFile.activeSheetIndex === sIdx;
+                          return (
+                            <button
+                              key={`${sheet.name}-${sIdx}`}
+                              type="button"
+                              onClick={() =>
+                                setPreviewFile({
+                                  ...previewFile,
+                                  activeSheetIndex: sIdx,
+                                })
+                              }
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+                                isActive
+                                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400'
+                                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                              }`}
+                            >
+                              <TableIcon className="w-3.5 h-3.5 shrink-0" />
+                              <span className="font-semibold">{sheet.name}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                                  isActive ? 'bg-blue-800 text-blue-100' : 'bg-slate-800 text-slate-400'
+                                }`}
+                              >
+                                {sheet.totalRows} filas
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900/90 border border-slate-800 text-xs">
+                      <div className="flex items-center gap-2 text-slate-300 font-medium">
+                        <TableIcon className="w-4 h-4 text-blue-400 shrink-0" />
+                        <span>Tabla única (CSV):</span>
+                        <span className="font-mono text-blue-300">{previewFile.sheets[0]?.name}</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-slate-400">
+                        {previewFile.sheets[0]?.totalRows} filas • {previewFile.sheets[0]?.totalCols} columnas
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Active Sheet metadata bar */}
+                  {previewFile.sheets[previewFile.activeSheetIndex] && (
+                    <div className="text-[11px] text-slate-400 flex items-center justify-between px-1">
+                      <span>
+                        Hoja activa:{' '}
+                        <strong className="text-white font-mono">
+                          {previewFile.sheets[previewFile.activeSheetIndex].name}
+                        </strong>
+                      </span>
+                      <span className="font-mono text-[10px] text-blue-400">
+                        {previewFile.sheets[previewFile.activeSheetIndex].totalCols} columnas •{' '}
+                        {previewFile.sheets[previewFile.activeSheetIndex].totalRows} filas registradas
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Data Preview Table */}
+                  {previewFile.sheets[previewFile.activeSheetIndex] && (
+                    <div className="overflow-x-auto max-h-48 rounded-lg border border-slate-800">
+                      <table className="w-full text-left text-[11px] text-slate-300">
+                        <thead className="bg-slate-900 uppercase font-semibold text-slate-400 tracking-wider sticky top-0">
+                          <tr>
+                            {previewFile.sheets[previewFile.activeSheetIndex].headers.map((h, hIdx) => (
+                              <th
+                                key={hIdx}
+                                className="px-3 py-2 border-b border-slate-800 whitespace-nowrap bg-slate-900"
+                              >
+                                {h}
+                              </th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/80 bg-slate-950 font-mono">
+                          {previewFile.sheets[previewFile.activeSheetIndex].rows.length > 0 ? (
+                            previewFile.sheets[previewFile.activeSheetIndex].rows.map((row, rIdx) => (
+                              <tr key={rIdx} className="hover:bg-slate-900/60">
+                                {row.map((cell, cIdx) => (
+                                  <td key={cIdx} className="px-3 py-1.5 whitespace-nowrap">
+                                    {cell !== '' ? cell : '-'}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={previewFile.sheets[previewFile.activeSheetIndex].headers.length || 1}
+                                className="px-3 py-4 text-center text-slate-500 italic"
+                              >
+                                (No se encontraron filas con datos en esta hoja)
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   <p className="text-[10px] text-slate-500">
-                    Mostrando primeras filas de muestra. Al presionar "Conectar e Introspeccionar", todos los archivos se montan en SQLite volátil para Text-to-SQL.
+                    Mostrando las primeras 10 filas de muestra. Al conectar, el backend montará cada hoja como una tabla independiente en SQLite volátil (Zero-Retention) para consultas Text-to-SQL.
                   </p>
                 </div>
               )}
