@@ -8,6 +8,7 @@ import strategyRoutes from './routes/strategy.routes';
 import alertRoutes from './routes/alert.routes';
 import serviceRequestRoutes from './routes/serviceRequest.routes';
 import authRoutes from './routes/auth.routes';
+import adminRoutes from './routes/admin.routes';
 import { errorHandler } from './middleware/errorHandler.middleware';
 
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/strategies', strategyRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
@@ -52,11 +54,11 @@ async function seedDefaultTemplates() {
     const defaultPasswordHash = await bcrypt.hash('Anexar2026!', 10);
     const consultant = await prisma.user.upsert({
       where: { email: 'consultoria@anexar.com.ar' },
-      update: { passwordHash: defaultPasswordHash },
+      update: { passwordHash: defaultPasswordHash, role: 'ADMIN' },
       create: {
         email: 'consultoria@anexar.com.ar',
         name: 'Equipo Senior ANEXAR',
-        role: 'CONSULTANT',
+        role: 'ADMIN',
         company: 'ANEXAR Consultoría Contable & Tecnológica',
         passwordHash: defaultPasswordHash,
       },

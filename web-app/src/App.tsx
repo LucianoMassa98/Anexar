@@ -4,15 +4,17 @@ import { QueryConsole } from './components/dashboard/QueryConsole';
 import { ConnectionModal } from './components/dashboard/ConnectionModal';
 import { MarketplaceModal } from './components/dashboard/MarketplaceModal';
 import { ConsultingModal } from './components/dashboard/ConsultingModal';
+import { AdminModal } from './components/dashboard/AdminModal';
 import { Strategy } from './types';
 import { useAuthStore } from './store/useAuthStore';
-import { ArrowLeft, Database, Sparkles, LogOut, User, Headphones } from 'lucide-react';
+import { ArrowLeft, Database, Sparkles, LogOut, User, Headphones, ShieldCheck } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'dashboard'>('landing');
   const [isConnectOpen, setIsConnectOpen] = useState(false);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
   const [isConsultingOpen, setIsConsultingOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   const { isAuthenticated, user, logout } = useAuthStore();
 
@@ -79,6 +81,16 @@ export const App: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setIsAdminOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-blue-900/30 hover:bg-blue-900/50 border border-blue-500/40 text-xs text-blue-300 font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+            title="Panel de Administración y Métricas"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Panel Admin</span>
+            <span className="sm:hidden">Admin</span>
+          </button>
+
+          <button
             onClick={() => setIsMarketplaceOpen(true)}
             className="px-3 py-1.5 rounded-xl bg-black/60 hover:bg-slate-900 border border-blue-900/40 text-xs text-slate-200 font-medium flex items-center gap-1.5 cursor-pointer"
           >
@@ -124,6 +136,10 @@ export const App: React.FC = () => {
       <ConsultingModal
         isOpen={isConsultingOpen}
         onClose={() => setIsConsultingOpen(false)}
+      />
+      <AdminModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
       />
     </div>
   );
