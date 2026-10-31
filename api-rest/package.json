@@ -1,0 +1,46 @@
+{
+  "name": "anexar-api-rest",
+  "version": "1.0.0",
+  "description": "Backend API REST para Anexar - Plataforma Text-to-SQL con Zero-Retention y Embudo B2B",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.1.9",
+    "ai": "^4.1.20",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "node-sql-parser": "^5.3.5",
+    "pg": "^8.13.1",
+    "sql.js": "^1.12.0",
+    "xlsx": "^0.18.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.8",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "@types/sql.js": "^1.4.9",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

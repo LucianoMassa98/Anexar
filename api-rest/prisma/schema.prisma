@@ -1,0 +1,247 @@
+// Prisma Schema for Anexar
+// Internal Database: PostgreSQL hosted on Railway (pointed by DATABASE_URL)
+// STRICT ZERO-RETENTION: Client database credentials, raw spreadsheets, and operational records
+// are NEVER persisted in this database. They exist solely in ephemeral memory during execution.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  CONSULTANT
+  ADMIN
+}
+
+enum Visibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum ChartType {
+  BAR
+  LINE
+  PIE
+  AREA
+  TABLE
+  KPI_CARD
+}
+
+enum StrategyCategory {
+  FINANCE
+  CONTABILITY
+  OPERATIONS
+  SALES
+  INVENTORY
+  TAX
+}
+
+enum AlertOperator {
+  GREATER_THAN
+  LESS_THAN
+  GREATER_EQUAL
+  LESS_EQUAL
+  EQUALS
+  NOT_EQUALS
+}
+
+enum AlertFrequency {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum SyncStatus {
+  SYNCED
+  PAUSED
+  ERROR
+}
+
+enum LeadNeedType {
+  CENTRALIZATION
+  AI_ANALYTICS
+  FINANCIAL_AUDIT
+  ERP_MIGRATION
+  GENERAL_CONSULTING
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  IN_NEGOTIATION
+  WON
+  LOST
+}
+
+model User {
+  id                  String             @id @default(uuid())
+  email               String             @unique
+  passwordHash        String?
+  name                String
+  role                Role               @default(USER)
+  company             String?
+  phone               String?
+  avatarUrl           String?
+  
+  // Google OAuth credentials for Calendar Sync
+  googleRefreshToken  String?            @db.Text
+  googleCalendarEmail String?
+
+  strategies          Strategy[]
+  ratings             StrategyRating[]
+  comments            StrategyComment[]
+  alerts              Alert[]
+  calendarSyncs       CalendarSync[]
+  assignedLeads       Lead[]             @relation("AssignedLeads")
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([email])
+}
+
+model Strategy {
+  id               String            @id @default(uuid())
+  title            String
+  slug             String            @unique
+  description      String            @db.Text
+  promptTemplate   String            @db.Text // Natural language prompt template
+  generatedSql     String            @db.Text // Baseline validated read-only SQL statement
+  chartType        ChartType         @default(BAR)
+  chartConfig      Json?             // Axis mappings, aggregations, color schemes
+  parameters       Json?             // Dynamic parameters schema for runtime replacement
+  category         StrategyCategory  @default(FINANCE)
+  visibility       Visibility        @default(PRIVATE)
+  isPremium        Boolean           @default(false) // Monetization flag
+  isTemplate       Boolean           @default(false) // Standard KPI template created by ANEXAR
+  viewsCount       Int               @default(0)
+  executionsCount  Int               @default(0)
+
+  authorId         String
+  author           User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  ratings          StrategyRating[]
+  comments         StrategyComment[]
+  alerts           Alert[]
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([visibility, category])
+  @@index([isPremium])
+  @@index([isTemplate])
+  @@index([authorId])
+}
+
+model StrategyRating {
+  id          String    @id @default(uuid())
+  strategyId  String
+  strategy    Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score       Int       // Rating 1 to 5 stars
+  review      String?   @db.Text
+  createdAt   DateTime  @default(now())
+
+  @@unique([strategyId, userId])
+  @@index([strategyId])
+}
+
+model StrategyComment {
+  id          String            @id @default(uuid())
+  strategyId  String
+  strategy    Strategy          @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String            @db.Text
+  
+  // Nested replies support
+  parentId    String?
+  parent      StrategyComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     StrategyComment[] @relation("CommentReplies")
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([strategyId])
+  @@index([parentId])
+}
+
+model Alert {
+  id              String         @id @default(uuid())
+  name            String
+  strategyId      String
+  strategy        Strategy       @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  conditionMetric String         // Name of column/field in SQL result (e.g. "ebitda_margin")
+  operator        AlertOperator
+  thresholdValue  Float          // Trigger value (e.g. 15.0)
+  frequency       AlertFrequency @default(DAILY)
+  isActive        Boolean        @default(true)
+
+  lastEvaluatedAt DateTime?
+  lastTriggeredAt DateTime?
+  lastValue       Float?
+  lastStatus      String?        // OK | TRIGGERED | ERROR
+
+  calendarSync    CalendarSync?
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([strategyId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model CalendarSync {
+  id             String      @id @default(uuid())
+  alertId        String      @unique
+  alert          Alert       @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  googleEventId  String
+  calendarId     String      @default("primary")
+  eventTitle     String
+  recurrenceRule String      // RFC 5545 RRULE e.g. "RRULE:FREQ=DAILY;BYHOUR=9"
+  syncStatus     SyncStatus  @default(SYNCED)
+  lastSyncedAt   DateTime    @default(now())
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([alertId])
+}
+
+model Lead {
+  id           String        @id @default(uuid())
+  fullName     String
+  company      String
+  email        String
+  phone        String?
+  currentErp   String?       // "SAP", "Tango", "Bejerman", "Odoo", "Excel fragmentado", etc.
+  dataVolume   String?       // "< 10GB", "10-100GB", "> 100GB", "Multi-sucursal"
+  needType     LeadNeedType  @default(GENERAL_CONSULTING)
+  message      String?       @db.Text
+  status       LeadStatus    @default(NEW)
+
+  assignedToId String?
+  assignedTo   User?         @relation("AssignedLeads", fields: [assignedToId], references: [id])
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status])
+  @@index([email])
+}
