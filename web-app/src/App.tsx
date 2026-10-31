@@ -3,19 +3,28 @@ import { LandingPage } from './components/landing/LandingPage';
 import { QueryConsole } from './components/dashboard/QueryConsole';
 import { ConnectionModal } from './components/dashboard/ConnectionModal';
 import { MarketplaceModal } from './components/dashboard/MarketplaceModal';
+import { ConsultingModal } from './components/dashboard/ConsultingModal';
 import { Strategy } from './types';
 import { useAuthStore } from './store/useAuthStore';
-import { ArrowLeft, Database, Sparkles, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Database, Sparkles, LogOut, User, Headphones } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'dashboard'>('landing');
   const [isConnectOpen, setIsConnectOpen] = useState(false);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+  const [isConsultingOpen, setIsConsultingOpen] = useState(false);
 
   const { isAuthenticated, user, logout } = useAuthStore();
 
   const handleSelectStrategy = (strategy: Strategy) => {
     console.log('Selected strategy:', strategy.title);
+  };
+
+  const handleOpenApp = (defaultModal?: 'consulting') => {
+    setView('dashboard');
+    if (defaultModal === 'consulting') {
+      setIsConsultingOpen(true);
+    }
   };
 
   const handleLogout = () => {
@@ -24,7 +33,7 @@ export const App: React.FC = () => {
   };
 
   if (view === 'landing') {
-    return <LandingPage onOpenApp={() => setView('dashboard')} />;
+    return <LandingPage onOpenApp={handleOpenApp} />;
   }
 
   return (
@@ -59,6 +68,15 @@ export const App: React.FC = () => {
               <span>{user.name}</span>
             </div>
           )}
+
+          <button
+            onClick={() => setIsConsultingOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 text-xs text-blue-300 font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <Headphones className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Solicitar Consultoría / Soporte</span>
+            <span className="sm:hidden">Consultoría</span>
+          </button>
 
           <button
             onClick={() => setIsMarketplaceOpen(true)}
@@ -102,6 +120,10 @@ export const App: React.FC = () => {
         isOpen={isMarketplaceOpen}
         onClose={() => setIsMarketplaceOpen(false)}
         onSelectStrategy={handleSelectStrategy}
+      />
+      <ConsultingModal
+        isOpen={isConsultingOpen}
+        onClose={() => setIsConsultingOpen(false)}
       />
     </div>
   );

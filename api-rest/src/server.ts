@@ -5,7 +5,7 @@ import { prisma } from './services/prisma.service';
 import analyticsRoutes from './routes/analytics.routes';
 import strategyRoutes from './routes/strategy.routes';
 import alertRoutes from './routes/alert.routes';
-import leadRoutes from './routes/lead.routes';
+import serviceRequestRoutes from './routes/serviceRequest.routes';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middleware/errorHandler.middleware';
 
@@ -36,7 +36,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/strategies', strategyRoutes);
 app.use('/api/alerts', alertRoutes);
-app.use('/api/leads', leadRoutes);
+app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/auth', authRoutes);
 
 // Global Error Handler

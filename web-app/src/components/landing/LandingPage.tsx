@@ -2,18 +2,16 @@ import React, { useState } from 'react';
 import { HeroSection } from './HeroSection';
 import { ServicesGrid } from './ServicesGrid';
 import { ArchitectureShowcase } from './ArchitectureShowcase';
-import { LeadContactForm } from './LeadContactForm';
 import { Footer } from './Footer';
 import { AuthModal } from '../auth/AuthModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ArrowRight } from 'lucide-react';
 
 interface LandingPageProps {
-  onOpenApp: () => void;
+  onOpenApp: (defaultModal?: 'consulting') => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
-  const [selectedNeedType, setSelectedNeedType] = useState('GENERAL_CONSULTING');
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
 
@@ -28,20 +26,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
     }
   };
 
+  const handleConsultingClick = () => {
+    if (isAuthenticated) {
+      onOpenApp('consulting');
+    } else {
+      setAuthMode('register');
+      setIsAuthOpen(true);
+    }
+  };
+
   const handleLoginClick = () => {
     if (isAuthenticated) {
       onOpenApp();
     } else {
       setAuthMode('login');
       setIsAuthOpen(true);
-    }
-  };
-
-  const scrollToContact = (needType?: string) => {
-    if (needType) setSelectedNeedType(needType);
-    const element = document.getElementById('contacto');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -58,7 +57,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             <div>
               <span className="font-bold text-sm tracking-tight text-white block">ANEXAR</span>
               <span className="text-[9px] uppercase tracking-wider text-blue-400 block -mt-1 font-medium">
-                Consultoría B2B
+                Consultoría Contable & Tecnológica
               </span>
             </div>
           </div>
@@ -72,10 +71,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               Seguridad & Zero-Retention
             </a>
             <button
-              onClick={() => scrollToContact()}
+              onClick={handleConsultingClick}
               className="hover:text-white transition-colors cursor-pointer"
             >
-              Consultoría
+              Consultoría & Soporte
             </button>
           </nav>
 
@@ -87,10 +86,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                   Hola, <strong className="text-white">{user?.name}</strong>
                 </span>
                 <button
-                  onClick={onOpenApp}
+                  onClick={() => onOpenApp()}
                   className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Ir al SaaS</span>
+                  <span>Ir al Panel</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
                 <button
@@ -121,12 +120,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
         </div>
       </header>
 
-      {/* Main Sections */}
+      {/* Main Minimalist Sections (No contact form, directs to registration & panel) */}
       <main className="flex-1">
-        <HeroSection onRegisterClick={handleTrySaaS} onContactClick={() => scrollToContact()} />
-        <ServicesGrid onSelectService={(type) => scrollToContact(type)} />
+        <HeroSection onRegisterClick={handleTrySaaS} onContactClick={handleConsultingClick} />
+        <ServicesGrid onSelectService={() => handleConsultingClick()} />
         <ArchitectureShowcase />
-        <LeadContactForm initialNeedType={selectedNeedType} />
       </main>
 
       <Footer />
@@ -135,7 +133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        onSuccess={onOpenApp}
+        onSuccess={() => onOpenApp()}
         initialMode={authMode}
       />
     </div>

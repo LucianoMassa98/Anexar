@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 
 interface ServicesGridProps {
-  onSelectService: (serviceName: string) => void;
+  onSelectService: (serviceName?: string) => void;
 }
 
 export const ServicesGrid: React.FC<ServicesGridProps> = ({ onSelectService }) => {

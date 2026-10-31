@@ -81,14 +81,17 @@ export interface Strategy {
   createdAt: string;
 }
 
-export interface LeadFormData {
-  fullName: string;
-  company: string;
-  email: string;
-  phone?: string;
+export type ServiceRequestType =
+  | 'CONSULTORIA_CONTABLE'
+  | 'CENTRALIZACION_ERPS'
+  | 'TEXT_TO_SQL_IA'
+  | 'SOPORTE_TECNICO';
+
+export interface ServiceRequestData {
+  title: string;
+  description: string;
+  type: ServiceRequestType;
   currentErp?: string;
-  dataVolume?: string;
-  needType: 'CENTRALIZATION' | 'AI_ANALYTICS' | 'FINANCIAL_AUDIT' | 'ERP_MIGRATION' | 'GENERAL_CONSULTING';
-  message?: string;
+  userId?: string;
 }
 

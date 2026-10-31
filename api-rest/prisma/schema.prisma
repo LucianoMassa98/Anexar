@@ -63,21 +63,18 @@ enum SyncStatus {
   ERROR
 }
 
-enum LeadNeedType {
-  CENTRALIZATION
-  AI_ANALYTICS
-  FINANCIAL_AUDIT
-  ERP_MIGRATION
-  GENERAL_CONSULTING
+enum ServiceRequestType {
+  CONSULTORIA_CONTABLE
+  CENTRALIZACION_ERPS
+  TEXT_TO_SQL_IA
+  SOPORTE_TECNICO
 }
 
-enum LeadStatus {
-  NEW
-  CONTACTED
-  QUALIFIED
-  IN_NEGOTIATION
-  WON
-  LOST
+enum ServiceRequestStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
 }
 
 model User {
@@ -99,7 +96,7 @@ model User {
   comments            StrategyComment[]
   alerts              Alert[]
   calendarSyncs       CalendarSync[]
-  assignedLeads       Lead[]             @relation("AssignedLeads")
+  serviceRequests     ServiceRequest[]
 
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
@@ -224,25 +221,19 @@ model CalendarSync {
   @@index([alertId])
 }
 
-model Lead {
-  id           String        @id @default(uuid())
-  fullName     String
-  company      String
-  email        String
-  phone        String?
-  currentErp   String?       // "SAP", "Tango", "Bejerman", "Odoo", "Excel fragmentado", etc.
-  dataVolume   String?       // "< 10GB", "10-100GB", "> 100GB", "Multi-sucursal"
-  needType     LeadNeedType  @default(GENERAL_CONSULTING)
-  message      String?       @db.Text
-  status       LeadStatus    @default(NEW)
+model ServiceRequest {
+  id          String               @id @default(uuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        ServiceRequestType   @default(CONSULTORIA_CONTABLE)
+  title       String
+  description String               @db.Text
+  currentErp  String?              // "SAP", "Tango", "Bejerman", "Odoo", "Excel", etc.
+  status      ServiceRequestStatus @default(PENDING)
 
-  assignedToId String?
-  assignedTo   User?         @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
+  @@index([userId])
   @@index([status])
-  @@index([email])
 }
-
