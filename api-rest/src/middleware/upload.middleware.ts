@@ -8,7 +8,7 @@ export const uploadMiddleware = multer({
   storage,
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB maximum per file
-    files: 5,
+    files: 20, // Support up to 20 simultaneous files
   },
   fileFilter: (_req, file, cb) => {
     const allowedMime = [

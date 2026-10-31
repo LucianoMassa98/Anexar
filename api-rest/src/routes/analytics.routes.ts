@@ -5,10 +5,10 @@ import { uploadMiddleware } from '../middleware/upload.middleware';
 const router = Router();
 
 // Introspect ephemeral schema (DB or uploaded file)
-router.post('/schema', uploadMiddleware.array('files', 5), AnalyticsController.getSchema);
+router.post('/schema', uploadMiddleware.array('files', 20), AnalyticsController.getSchema);
 
 // Execute Text-to-SQL or raw query with Zero-Retention and SQL Firewall
-router.post('/query', uploadMiddleware.array('files', 5), AnalyticsController.executeAnalyticsQuery);
+router.post('/query', uploadMiddleware.array('files', 20), AnalyticsController.executeAnalyticsQuery);
 
 export default router;
 

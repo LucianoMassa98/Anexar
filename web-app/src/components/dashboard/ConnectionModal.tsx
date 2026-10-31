@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { X, Database, FileSpreadsheet, ShieldCheck, Check, AlertCircle, Loader2, Eye, Table as TableIcon } from 'lucide-react';
+import {
+  X,
+  Database,
+  FileSpreadsheet,
+  ShieldCheck,
+  Check,
+  AlertCircle,
+  Loader2,
+  Eye,
+  Table as TableIcon,
+  Trash2,
+  UploadCloud,
+} from 'lucide-react';
 import { useConnectionStore } from '../../store/useConnectionStore';
 
 interface ConnectionModalProps {
@@ -25,19 +37,42 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
     error,
     setEngine,
     setPostgresCreds,
-    setEphemeralFiles,
+    addEphemeralFiles,
+    removeEphemeralFile,
+    clearEphemeralFiles,
     connect,
     disconnect,
   } = useConnectionStore();
 
   const [selectedTab, setSelectedTab] = useState<'memory-file' | 'postgres'>(engine);
   const [previewFile, setPreviewFile] = useState<PreviewFileData | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   if (!isOpen) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setEphemeralFiles(Array.from(e.target.files));
+      addEphemeralFiles(Array.from(e.target.files));
+      setPreviewFile(null);
+      // Reset input value so subsequent selections of the same or new files trigger properly
+      e.target.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addEphemeralFiles(Array.from(e.dataTransfer.files));
       setPreviewFile(null);
     }
   };
@@ -90,13 +125,22 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
         headers: ['Propiedad', 'Detalle'],
         rows: [
           ['Nombre del Archivo', file.name],
-          ['Formato', file.name.toLowerCase().endsWith('.xlsx') ? 'Hoja de Cálculo Excel OpenXML (.xlsx)' : 'Libro Excel 97-2004 (.xls)'],
+          [
+            'Formato',
+            file.name.toLowerCase().endsWith('.xlsx')
+              ? 'Hoja de Cálculo Excel OpenXML (.xlsx)'
+              : 'Libro Excel 97-2004 (.xls)',
+          ],
           ['Tamaño en Memoria', `${(file.size / 1024).toFixed(1)} KB`],
           ['Motor de Procesamiento', 'SQLite WebAssembly en RAM volátil (Zero-Retention)'],
         ],
       });
     }
   };
+
+  const totalFilesSizeKb = (
+    ephemeralFiles.reduce((acc, f) => acc + f.size, 0) / 1024
+  ).toFixed(1);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
@@ -175,7 +219,17 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
                 Suba uno o varios archivos <code className="text-blue-300">.xlsx</code> o <code className="text-blue-300">.csv</code>. El backend los montará en una base SQLite en memoria para consultar con SQL estándar sin escribir nada en disco.
               </p>
 
-              <div className="border-2 border-dashed border-slate-700 hover:border-blue-500/60 rounded-xl p-6 text-center cursor-pointer transition-colors bg-slate-950/40">
+              {/* Drag and Drop Upload Area */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                  isDragging
+                    ? 'border-blue-400 bg-blue-950/40 shadow-inner'
+                    : 'border-slate-700 hover:border-blue-500/60 bg-slate-950/40'
+                }`}
+              >
                 <input
                   type="file"
                   multiple
@@ -185,66 +239,122 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
                   id="ephemeral-file-input"
                 />
                 <label htmlFor="ephemeral-file-input" className="cursor-pointer block space-y-2">
-                  <FileSpreadsheet className="w-8 h-8 text-slate-400 mx-auto" />
-                  <p className="text-xs font-medium text-slate-200">
-                    Haga clic para seleccionar archivos o arrástrelos aquí
+                  <div className="w-10 h-10 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mx-auto">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-200">
+                    Haga clic para agregar archivos o arrástrelos aquí
                   </p>
-                  <p className="text-[11px] text-slate-500">Soporta hojas de balance, mayores, ventas o extractos</p>
+                  <p className="text-[11px] text-slate-400">
+                    Puede subir múltiples archivos simultáneamente (balance, mayor, ventas, extractos)
+                  </p>
                 </label>
               </div>
 
-              {/* Uploaded Files List with "Ver" Button */}
+              {/* Uploaded Files List with "Ver" and "Eliminar" */}
               {ephemeralFiles.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">
-                    Archivos cargados en memoria ({ephemeralFiles.length}):
-                  </span>
-                  <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wider text-slate-300 font-bold flex items-center gap-2">
+                      <span>Archivos cargados en memoria:</span>
+                      <span className="px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-300 font-mono text-[11px]">
+                        {ephemeralFiles.length}
+                      </span>
+                    </span>
+
+                    {ephemeralFiles.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearEphemeralFiles();
+                          setPreviewFile(null);
+                        }}
+                        className="text-[11px] text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                      >
+                        Limpiar todos
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Scrollable list displaying all files */}
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {ephemeralFiles.map((f, i) => (
                       <div
-                        key={i}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800/70 border border-slate-700/60 text-xs text-slate-200"
+                        key={`${f.name}-${i}`}
+                        className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-blue-500/40 transition-colors text-xs text-slate-200"
                       >
-                        <div className="flex items-center gap-2 truncate mr-3">
-                          <FileSpreadsheet className="w-4 h-4 text-blue-400 shrink-0" />
-                          <span className="truncate font-medium">{f.name}</span>
-                          <span className="text-slate-400 font-mono text-[11px] shrink-0">
-                            ({(f.size / 1024).toFixed(1)} KB)
+                        <div className="flex items-center gap-2.5 min-w-0 mr-3">
+                          <span className="w-5 h-5 rounded-full bg-blue-600/20 text-blue-400 text-[10px] font-mono flex items-center justify-center shrink-0">
+                            {i + 1}
                           </span>
+                          <FileSpreadsheet className="w-4 h-4 text-blue-400 shrink-0" />
+                          <div className="truncate">
+                            <p className="truncate font-medium text-white" title={f.name}>
+                              {f.name}
+                            </p>
+                            <p className="text-slate-400 font-mono text-[10px]">
+                              {(f.size / 1024).toFixed(1)} KB • {f.name.split('.').pop()?.toUpperCase()}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* "Ver" Button */}
-                        <button
-                          type="button"
-                          onClick={() => handlePreviewFile(f)}
-                          className="px-2.5 py-1 rounded-md bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 border border-blue-500/30 shadow-sm"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Ver</span>
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* "Ver" Button */}
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewFile(f)}
+                            className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-500/30 shadow-sm"
+                            title="Previsualizar registros del archivo"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Ver</span>
+                          </button>
+
+                          {/* "Eliminar" Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              removeEphemeralFile(i);
+                              if (previewFile?.name === f.name) {
+                                setPreviewFile(null);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors cursor-pointer"
+                            title="Quitar archivo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800">
+                    <span>
+                      Total: <strong className="text-white">{ephemeralFiles.length}</strong> archivo(s) listo(s)
+                    </span>
+                    <span className="font-mono text-blue-400">{totalFilesSizeKb} KB en RAM</span>
                   </div>
                 </div>
               )}
 
               {/* In-Modal File Preview Area */}
               {previewFile && (
-                <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-blue-500/30 space-y-3">
+                <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-blue-500/40 space-y-3 shadow-xl">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TableIcon className="w-4 h-4 text-blue-400" />
-                      <span className="text-xs font-bold text-white">
+                    <div className="flex items-center gap-2 min-w-0 mr-2">
+                      <TableIcon className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span className="text-xs font-bold text-white truncate">
                         Vista Previa: <span className="font-mono text-blue-300">{previewFile.name}</span>
                       </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-500/30 uppercase">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-500/30 uppercase shrink-0">
                         {previewFile.type}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPreviewFile(null)}
-                      className="text-xs text-slate-400 hover:text-white cursor-pointer px-2 py-0.5 rounded hover:bg-slate-800"
+                      className="text-xs text-slate-400 hover:text-white cursor-pointer px-2 py-1 rounded hover:bg-slate-800 shrink-0 transition-colors"
                     >
                       Cerrar Vista
                     </button>
@@ -276,7 +386,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
                   </div>
 
                   <p className="text-[10px] text-slate-500">
-                    Mostrando primeras filas de muestra. Al conectar, todos los registros se montan en SQLite volátil para Text-to-SQL.
+                    Mostrando primeras filas de muestra. Al presionar "Conectar e Introspeccionar", todos los archivos se montan en SQLite volátil para Text-to-SQL.
                   </p>
                 </div>
               )}
@@ -387,7 +497,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
             </button>
             <button
               onClick={handleConnect}
-              disabled={isLoading}
+              disabled={isLoading || (selectedTab === 'memory-file' && ephemeralFiles.length === 0)}
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50 transition-colors"
             >
               {isLoading ? (

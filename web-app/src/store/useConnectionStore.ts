@@ -13,6 +13,9 @@ interface ConnectionStoreState {
   setEngine: (engine: EngineType) => void;
   setPostgresCreds: (creds: Partial<PostgresCredentials>) => void;
   setEphemeralFiles: (files: File[]) => void;
+  addEphemeralFiles: (files: File[]) => void;
+  removeEphemeralFile: (index: number) => void;
+  clearEphemeralFiles: () => void;
   setSchema: (schema: TableSchema[]) => void;
   connect: (apiUrl?: string) => Promise<boolean>;
   disconnect: () => void;
@@ -43,6 +46,24 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
     })),
 
   setEphemeralFiles: (files) => set({ ephemeralFiles: files, error: null }),
+
+  addEphemeralFiles: (newFiles) =>
+    set((state) => {
+      // Deduplicate by name and size so re-uploading adds missing files cleanly
+      const existingKeys = new Set(state.ephemeralFiles.map((f) => `${f.name}-${f.size}`));
+      const nonDuplicates = newFiles.filter((f) => !existingKeys.has(`${f.name}-${f.size}`));
+      return {
+        ephemeralFiles: [...state.ephemeralFiles, ...nonDuplicates],
+        error: null,
+      };
+    }),
+
+  removeEphemeralFile: (index) =>
+    set((state) => ({
+      ephemeralFiles: state.ephemeralFiles.filter((_, idx) => idx !== index),
+    })),
+
+  clearEphemeralFiles: () => set({ ephemeralFiles: [] }),
 
   setSchema: (schema) => set({ schema }),
 
@@ -110,4 +131,3 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
     });
   },
 }));
-

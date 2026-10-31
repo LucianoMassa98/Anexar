@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -80,61 +81,82 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
       {/* Top Connection Banner */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex flex-wrap items-center justify-between gap-4 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              isConnected
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-            }`}
-          >
-            <Database className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">
-                {isConnected
-                  ? engine === 'memory-file'
-                    ? `Archivos en Memoria (${ephemeralFiles.length} cargados)`
-                    : 'PostgreSQL Activo'
-                  : 'Sin Fuente Conectada'}
-              </span>
-              <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  isConnected
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                }`}
-              >
-                {isConnected ? 'ZERO-RETENTION ACTIVO' : 'MODO DEMO / DESCONECTADO'}
-              </span>
+      <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                isConnected
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+              }`}
+            >
+              <Database className="w-5 h-5" />
             </div>
-            <p className="text-xs text-slate-400">
-              {isConnected
-                ? `${schema.length} tablas introspeccionadas listas para consultar.`
-                : 'Conecte una base de datos o suba un archivo Excel/CSV para consultar sus propios datos.'}
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">
+                  {isConnected
+                    ? engine === 'memory-file'
+                      ? `Archivos en Memoria (${ephemeralFiles.length} cargados)`
+                      : 'PostgreSQL Activo'
+                    : 'Sin Fuente Conectada'}
+                </span>
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                    isConnected
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  }`}
+                >
+                  {isConnected ? 'ZERO-RETENTION ACTIVO' : 'MODO DEMO / DESCONECTADO'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                {isConnected
+                  ? `${schema.length} tablas introspeccionadas listas para consultar.`
+                  : 'Conecte una base de datos o suba un archivo Excel/CSV para consultar sus propios datos.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onOpenMarketplaceModal}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border border-slate-700"
+            >
+              <Sparkles className="w-4 h-4 text-brand-400" />
+              <span>Marketplace de KPIs</span>
+            </button>
+
+            <button
+              onClick={onOpenConnectModal}
+              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-brand-500/20"
+            >
+              <Database className="w-4 h-4" />
+              <span>{isConnected ? 'Gestionar Fuentes' : 'Conectar Datos'}</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onOpenMarketplaceModal}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border border-slate-700"
-          >
-            <Sparkles className="w-4 h-4 text-brand-400" />
-            <span>Marketplace de KPIs</span>
-          </button>
-
-          <button
-            onClick={onOpenConnectModal}
-            className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-brand-500/20"
-          >
-            <Database className="w-4 h-4" />
-            <span>{isConnected ? 'Cambiar Fuente' : 'Conectar Datos'}</span>
-          </button>
-        </div>
+        {/* Display all uploaded files directly in the console banner */}
+        {isConnected && engine === 'memory-file' && ephemeralFiles.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" />
+              <span>Archivos ({ephemeralFiles.length}):</span>
+            </span>
+            {ephemeralFiles.map((file, idx) => (
+              <span
+                key={`${file.name}-${idx}`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700/80 text-xs text-blue-300 font-mono shadow-sm"
+              >
+                <span>{file.name}</span>
+                <span className="text-[10px] text-slate-400">({(file.size / 1024).toFixed(1)} KB)</span>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Query Bar */}
