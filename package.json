@@ -1,0 +1,11 @@
+{
+  "name": "anexar-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Monorepo para Anexar - Consultoría Contable & Tecnológica",
+  "scripts": {
+    "install:all": "npm --prefix api-rest install && npm --prefix web-app install",
+    "dev:api": "npm --prefix api-rest run dev",
+    "dev:web": "npm --prefix web-app run dev"
+  }
+}
