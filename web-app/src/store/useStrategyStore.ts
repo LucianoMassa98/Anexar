@@ -71,6 +71,7 @@ export const useStrategyStore = create<StrategyStoreState>((set) => ({
           prompt,
           sql,
           engine: 'memory-file',
+          classification: conn.classification,
           threshold,
         };
 
@@ -93,6 +94,7 @@ export const useStrategyStore = create<StrategyStoreState>((set) => ({
               connectionString: conn.postgresCreds.connectionString?.trim(),
               ...conn.postgresCreds,
             },
+            classification: conn.classification,
             threshold,
           }),
         });

@@ -36,12 +36,62 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
   onOpenConnectModal,
   onOpenMarketplaceModal,
 }) => {
-  const { engine, isConnected, schema, ephemeralFiles } = useConnectionStore();
+  const { engine, isConnected, schema, ephemeralFiles, classification } = useConnectionStore();
   const { isExecuting, queryResponse, executeQuery, error } = useStrategyStore();
 
   const [promptInput, setPromptInput] = useState('');
   const [activeView, setActiveView] = useState<'chart' | 'table'>('chart');
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+
+  const getDynamicSuggestions = () => {
+    const domain = classification?.dataDomain;
+    if (domain === 'Ventas y Facturación') {
+      return [
+        'Top 10 clientes con mayor volumen de facturación',
+        'Ticket promedio mensual y margen bruto',
+        'Evolución de ventas interanual',
+        'Concentración de clientes (Pareto 80/20)',
+      ];
+    }
+    if (domain === 'Inventario & Stock') {
+      return [
+        'Rotación de inventario y días calle de stock',
+        'Productos sin movimiento en los últimos 90 días',
+        'Valuación total de stock al costo promedio',
+        'Quiebres de stock y alertas de reposición',
+      ];
+    }
+    if (domain === 'Cuentas por Cobrar / Pagar') {
+      return [
+        'Aging de cuentas por cobrar por tramo de mora',
+        'Plazo promedio de cobro a clientes (DSO)',
+        'Clientes con saldo vencido crítico',
+        'Conciliación de pagos vs facturas emitidas',
+      ];
+    }
+    if (domain === 'Costos y Producción') {
+      return [
+        'Margen de contribución por línea de producto',
+        'Punto de equilibrio operativo (Break-even)',
+        'Estructura de costos fijos vs variables',
+        'Desvío de costo estándar vs real',
+      ];
+    }
+    if (domain === 'Fiscal & Impuestos') {
+      return [
+        'Débito vs Crédito fiscal de IVA acumulado',
+        'Retenciones y percepciones sufridas en el período',
+        'Base imponible de Ingresos Brutos mensual',
+        'Conciliación fiscal vs registros contables',
+      ];
+    }
+    return [
+      'EBITDA y margen operativo mensual',
+      'Aging de cuentas por cobrar por tramo de mora',
+      'Rotación de stock y días calle de inventario',
+      'Conciliación bancaria contra libro mayor',
+    ];
+  };
 
   // Threshold Alert configuration state
   const [enableAlert, setEnableAlert] = useState(false);
@@ -190,19 +240,21 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
           </div>
         </div>
 
-        {/* Quick Questions Pills */}
+        {/* Dynamic Suggestions Pills Tailored to Classification */}
         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-          <span className="text-slate-400 text-[11px]">Sugerencias frecuentes:</span>
-          {[
-            'EBITDA y margen operativo mensual',
-            'Aging de cuentas por cobrar por tramo de mora',
-            'Rotación de stock y días calle de inventario',
-            'Conciliación bancaria contra libro mayor',
-          ].map((q, idx) => (
+          <span className="text-slate-400 text-[11px] flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <span>
+              {classification?.dataDomain
+                ? `KPIs recomendados (${classification.dataDomain}):`
+                : 'Sugerencias frecuentes de negocio:'}
+            </span>
+          </span>
+          {getDynamicSuggestions().map((q, idx) => (
             <button
               key={idx}
               onClick={() => handleQuickQuestion(q)}
-              className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer text-xs"
+              className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-blue-500/40 transition-colors cursor-pointer text-xs"
             >
               {q}
             </button>

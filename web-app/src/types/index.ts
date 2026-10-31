@@ -1,5 +1,12 @@
 export type EngineType = 'postgres' | 'mysql' | 'memory-file';
 
+export interface DataClassification {
+  industry: string;
+  dataDomain: string;
+  sourceErp: string;
+  analysisGoal: string;
+}
+
 export interface PostgresCredentials {
   connectionString?: string;
   host?: string;

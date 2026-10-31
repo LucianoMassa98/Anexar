@@ -1,17 +1,19 @@
 import { create } from 'zustand';
-import { EngineType, PostgresCredentials, TableSchema } from '../types';
+import { EngineType, PostgresCredentials, TableSchema, DataClassification } from '../types';
 
 interface ConnectionStoreState {
   engine: EngineType;
   postgresCreds: PostgresCredentials;
   ephemeralFiles: File[];
   schema: TableSchema[];
+  classification: DataClassification;
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
 
   setEngine: (engine: EngineType) => void;
   setPostgresCreds: (creds: Partial<PostgresCredentials>) => void;
+  setClassification: (classification: Partial<DataClassification>) => void;
   setEphemeralFiles: (files: File[]) => void;
   addEphemeralFiles: (files: File[]) => void;
   removeEphemeralFile: (index: number) => void;
@@ -33,6 +35,12 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
   },
   ephemeralFiles: [],
   schema: [],
+  classification: {
+    industry: '',
+    dataDomain: '',
+    sourceErp: '',
+    analysisGoal: '',
+  },
   isConnected: false,
   isLoading: false,
   error: null,
@@ -43,6 +51,11 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
     set((state) => ({
       postgresCreds: { ...state.postgresCreds, ...creds },
       error: null,
+    })),
+
+  setClassification: (newClass) =>
+    set((state) => ({
+      classification: { ...state.classification, ...newClass },
     })),
 
   setEphemeralFiles: (files) => set({ ephemeralFiles: files, error: null }),
@@ -131,6 +144,12 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
     set({
       ephemeralFiles: [],
       schema: [],
+      classification: {
+        industry: '',
+        dataDomain: '',
+        sourceErp: '',
+        analysisGoal: '',
+      },
       isConnected: false,
       error: null,
     });

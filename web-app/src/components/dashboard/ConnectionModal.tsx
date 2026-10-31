@@ -12,6 +12,7 @@ import {
   Trash2,
   UploadCloud,
   Layers,
+  Sparkles,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useConnectionStore } from '../../store/useConnectionStore';
@@ -42,6 +43,8 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
     engine,
     postgresCreds,
     ephemeralFiles,
+    classification,
+    setClassification,
     isConnected,
     isLoading,
     error,
@@ -214,6 +217,95 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
     ephemeralFiles.reduce((acc, f) => acc + f.size, 0) / 1024
   ).toFixed(1);
 
+  const renderClassificationInputs = () => (
+    <div className="p-3.5 rounded-xl bg-slate-950/80 border border-blue-500/20 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+            Clasificación y Contexto (Opcional)
+          </span>
+        </div>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-900/40 text-blue-300 border border-blue-500/30">
+          Recomendaciones IA
+        </span>
+      </div>
+      <p className="text-[11px] text-slate-400 leading-tight">
+        Indique estos datos previos opcionales para que ANEXAR recomiende mejores estrategias y consultas adaptadas a su industria.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        <div>
+          <label className="block text-[10px] uppercase font-semibold text-slate-300 mb-1">
+            Rubro / Industria
+          </label>
+          <select
+            value={classification.industry}
+            onChange={(e) => setClassification({ industry: e.target.value })}
+            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+          >
+            <option value="">Seleccione rubro...</option>
+            <option value="Comercio / Retail">Comercio / Retail & E-commerce</option>
+            <option value="Servicios Profesionales">Servicios Profesionales & Consultoría</option>
+            <option value="Manufactura & Producción">Manufactura & Producción</option>
+            <option value="Tecnología / SaaS">Tecnología, Software & Startups</option>
+            <option value="Agropecuario">Agropecuario & Granos</option>
+            <option value="Salud & Farmacia">Salud, Clínicas & Farmacia</option>
+            <option value="Gastronomía & Hotelería">Gastronomía & Hotelería</option>
+            <option value="Construcción">Construcción & Desarrollos</option>
+            <option value="Otro">Otro rubro</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[10px] uppercase font-semibold text-slate-300 mb-1">
+            Tipo de Información
+          </label>
+          <select
+            value={classification.dataDomain}
+            onChange={(e) => setClassification({ dataDomain: e.target.value })}
+            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+          >
+            <option value="">Seleccione tipo de datos...</option>
+            <option value="Ventas y Facturación">Ventas, Clientes & Facturación</option>
+            <option value="Contabilidad & Balance">Contabilidad, Mayor & Balances</option>
+            <option value="Cuentas por Cobrar / Pagar">Cuentas por Cobrar / Pagar (Mora)</option>
+            <option value="Inventario & Stock">Inventario, Stock & Rotación</option>
+            <option value="Costos y Producción">Costos de Ventas & Producción</option>
+            <option value="Fiscal & Impuestos">Fiscal, IVA & Liquidación</option>
+            <option value="ERP Integral">ERP Integral / Múltiples Tablas</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[10px] uppercase font-semibold text-slate-300 mb-1">
+            ERP / Sistema de Origen
+          </label>
+          <input
+            type="text"
+            placeholder="ej. Tango, SAP, Bejerman, Odoo, AFIP, Excel"
+            value={classification.sourceErp}
+            onChange={(e) => setClassification({ sourceErp: e.target.value })}
+            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] uppercase font-semibold text-slate-300 mb-1">
+            Objetivo de Análisis
+          </label>
+          <input
+            type="text"
+            placeholder="ej. Medir EBITDA, Conciliar IVA, Reducir mora..."
+            value={classification.analysisGoal}
+            onChange={(e) => setClassification({ analysisGoal: e.target.value })}
+            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
       <div className="w-full max-w-xl rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col my-8">
@@ -287,6 +379,9 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
 
           {selectedTab === 'memory-file' ? (
             <div className="space-y-4">
+              {/* Inputs previos opcionales de clasificación */}
+              {renderClassificationInputs()}
+
               <p className="text-xs text-slate-300">
                 Suba uno o varios archivos <code className="text-blue-300">.xlsx</code> o <code className="text-blue-300">.csv</code>. El backend los montará en una base SQLite en memoria para consultar con SQL estándar sin escribir nada en disco.
               </p>
@@ -570,6 +665,9 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Inputs previos opcionales de clasificación */}
+              {renderClassificationInputs()}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-2">
                   Seleccione su motor de base de datos

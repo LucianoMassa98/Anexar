@@ -24,6 +24,14 @@ const queryBodySchema = z.object({
   sql: z.string().optional(),
   engine: z.enum(['postgres', 'mysql', 'memory-file']).default('postgres'),
   connectionConfig: dbConfigSchema.optional(),
+  classification: z
+    .object({
+      industry: z.string().optional(),
+      dataDomain: z.string().optional(),
+      sourceErp: z.string().optional(),
+      analysisGoal: z.string().optional(),
+    })
+    .optional(),
   threshold: z
     .object({
       conditionMetric: z.string(),
@@ -121,7 +129,12 @@ export class AnalyticsController {
       // 2. Generate SQL via Vercel AI SDK if natural language prompt is given
       if (!targetSql && prompt) {
         const schema = await adapter.getSchema();
-        const aiResult = await TextToSqlService.generateSql(prompt, schema, dialect);
+        const aiResult = await TextToSqlService.generateSql(
+          prompt,
+          schema,
+          dialect,
+          parsed.data.classification
+        );
         targetSql = aiResult.sql;
         explanation = aiResult.explanation;
       }

@@ -17,7 +17,8 @@ export class TextToSqlService {
   public static async generateSql(
     userPrompt: string,
     schema: TableSchema[],
-    dialect: 'postgresql' | 'sqlite' | 'mysql' | 'transactsql' = 'postgresql'
+    dialect: 'postgresql' | 'sqlite' | 'mysql' | 'transactsql' = 'postgresql',
+    classification?: { industry?: string; dataDomain?: string; sourceErp?: string; analysisGoal?: string }
   ): Promise<{ sql: string; explanation: string }> {
     // Format schema into compact DDL representation for context window efficiency
     const formattedSchema = schema
@@ -27,12 +28,21 @@ export class TextToSqlService {
       })
       .join('\n\n');
 
+    const businessContext = [
+      classification?.industry ? `Industry / Sector: ${classification.industry}` : '',
+      classification?.dataDomain ? `Domain Area: ${classification.dataDomain}` : '',
+      classification?.sourceErp ? `Source System / ERP: ${classification.sourceErp}` : '',
+      classification?.analysisGoal ? `Primary Strategic Goal: ${classification.analysisGoal}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
     const systemPrompt = `
 You are the Lead Data & Financial SQL Architect for "ANEXAR — Consultoría Contable & Tecnológica".
 Your role is to translate business, financial, and operational analytical requests into high-performance, strictly READ-ONLY SQL queries.
 
 Target SQL Dialect: ${dialect.toUpperCase()}
-
+${businessContext ? `BUSINESS & DOMAIN CONTEXT:\n${businessContext}\n` : ''}
 DATABASE SCHEMA:
 ${formattedSchema || 'No explicit schema provided. Use standard SQL financial naming conventions.'}
 
