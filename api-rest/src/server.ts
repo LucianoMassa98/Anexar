@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import bcrypt from 'bcryptjs';
 import { env } from './config/env';
 import { prisma } from './services/prisma.service';
 import analyticsRoutes from './routes/analytics.routes';
@@ -48,14 +49,16 @@ async function seedDefaultTemplates() {
     const templateCount = await prisma.strategy.count({ where: { isTemplate: true } });
     if (templateCount > 0) return;
 
+    const defaultPasswordHash = await bcrypt.hash('Anexar2026!', 10);
     const consultant = await prisma.user.upsert({
       where: { email: 'consultoria@anexar.com.ar' },
-      update: {},
+      update: { passwordHash: defaultPasswordHash },
       create: {
         email: 'consultoria@anexar.com.ar',
         name: 'Equipo Senior ANEXAR',
         role: 'CONSULTANT',
         company: 'ANEXAR Consultoría Contable & Tecnológica',
+        passwordHash: defaultPasswordHash,
       },
     });
 
