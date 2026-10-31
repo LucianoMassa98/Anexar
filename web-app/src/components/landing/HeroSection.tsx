@@ -23,16 +23,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onRegisterClick, onCon
 
         {/* Headline */}
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1] max-w-4xl mx-auto">
-          Inteligencia de Datos y{' '}
+          Análisis de datos para negocios en la{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-300 to-white">
-            Text-to-SQL
-          </span>{' '}
-          para Empresas
+            era de la IA
+          </span>
         </h1>
 
         {/* Short, direct copy */}
         <p className="mt-6 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
-          Centralice sus ERPs y bases fragmentadas. Consulte métricas contables y financieras en lenguaje natural con arquitectura de privacidad absoluta.
+          Analice datos operativos, contables y fiscales con mayor facilidad. Conciliaciones automáticas, control de gestión y respuestas inmediatas en lenguaje natural sin mover sus datos.
         </p>
 
         {/* CTAs */}
