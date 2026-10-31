@@ -7,3 +7,4 @@ router.post('/', ServiceRequestController.createRequest);
 router.get('/', ServiceRequestController.listRequests);
 
 export default router;
+
