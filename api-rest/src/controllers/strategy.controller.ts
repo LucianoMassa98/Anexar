@@ -111,7 +111,7 @@ export class StrategyController {
    */
   public static async getStrategyById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
 
       const strategy = await prisma.strategy.findUnique({
         where: { id },
@@ -198,7 +198,7 @@ export class StrategyController {
    */
   public static async rateStrategy(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const { score, review } = ratingSchema.parse(req.body);
       const userId = (req as any).user?.id;
 
@@ -243,7 +243,7 @@ export class StrategyController {
    */
   public static async addComment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const { content, parentId } = commentSchema.parse(req.body);
       const userId = (req as any).user?.id;
 
@@ -279,3 +279,4 @@ export class StrategyController {
     }
   }
 }
+

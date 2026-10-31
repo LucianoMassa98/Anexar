@@ -17,7 +17,7 @@ export class TextToSqlService {
   public static async generateSql(
     userPrompt: string,
     schema: TableSchema[],
-    dialect: 'postgresql' | 'sqlite' | 'mysql' = 'postgresql'
+    dialect: 'postgresql' | 'sqlite' | 'mysql' | 'transactsql' = 'postgresql'
   ): Promise<{ sql: string; explanation: string }> {
     // Format schema into compact DDL representation for context window efficiency
     const formattedSchema = schema
@@ -126,3 +126,4 @@ Explanation: <brief business context>
     };
   }
 }
+

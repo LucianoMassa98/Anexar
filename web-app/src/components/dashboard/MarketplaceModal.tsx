@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Star, MessageSquare, Lock, CheckCircle2, Bookmark, ArrowRight } from 'lucide-react';
+import { X, Sparkles, Star, MessageSquare, Lock, ArrowRight } from 'lucide-react';
 import { Strategy } from '../../types';
 import { useStrategyStore } from '../../store/useStrategyStore';
 
@@ -171,3 +171,4 @@ export const MarketplaceModal: React.FC<MarketplaceModalProps> = ({ isOpen, onCl
     </div>
   );
 };
+

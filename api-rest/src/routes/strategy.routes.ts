@@ -11,3 +11,4 @@ router.post('/:id/rate', StrategyController.rateStrategy);
 router.post('/:id/comments', StrategyController.addComment);
 
 export default router;
+

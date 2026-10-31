@@ -8,12 +8,9 @@ import {
   Sparkles,
   BarChart3,
   Table as TableIcon,
-  LineChart as LineIcon,
   AlertTriangle,
   CheckCircle,
   Clock,
-  Layers,
-  HelpCircle,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,7 +25,6 @@ import {
 } from 'recharts';
 import { useConnectionStore } from '../../store/useConnectionStore';
 import { useStrategyStore } from '../../store/useStrategyStore';
-import { Strategy } from '../../types';
 
 interface QueryConsoleProps {
   onOpenConnectModal: () => void;
@@ -391,7 +387,7 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
                         />
                         <Line
                           type="monotone"
-                          dataKey={firstNumericKey}
+                          dataKey={firstNumericKey || ''}
                           stroke="#0ea5e9"
                           strokeWidth={2.5}
                           dot={{ fill: '#38bdf8', r: 4 }}
@@ -410,7 +406,7 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
                           }}
                         />
                         <Bar
-                          dataKey={firstNumericKey}
+                          dataKey={firstNumericKey || ''}
                           fill="#0284c7"
                           radius={[4, 4, 0, 0]}
                         />
@@ -453,3 +449,4 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
     </div>
   );
 };
+

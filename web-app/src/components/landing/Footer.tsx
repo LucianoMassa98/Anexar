@@ -1,5 +1,5 @@
 import React from 'react';
-import { Github, Sparkles, Mail, ShieldCheck, Heart } from 'lucide-react';
+import { Github, ShieldCheck } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -89,3 +89,4 @@ export const Footer: React.FC = () => {
     </footer>
   );
 };
+

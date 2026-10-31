@@ -119,3 +119,4 @@ export const useStrategyStore = create<StrategyStoreState>((set) => ({
     }
   },
 }));
+

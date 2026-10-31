@@ -93,3 +93,4 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
     </div>
   );
 };
+

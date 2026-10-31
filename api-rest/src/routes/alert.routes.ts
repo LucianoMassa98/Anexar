@@ -7,3 +7,4 @@ router.get('/', AlertController.listAlerts);
 router.post('/', AlertController.createAlert);
 
 export default router;
+

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, CheckCircle2, AlertCircle, Building2, User, Mail, Phone, Database, FileSpreadsheet } from 'lucide-react';
+import { Send, CheckCircle2, AlertCircle, Building2, User, Mail, Phone } from 'lucide-react';
 import { LeadFormData } from '../../types';
 
 interface LeadContactFormProps {
@@ -266,3 +266,4 @@ export const LeadContactForm: React.FC<LeadContactFormProps> = ({ initialNeedTyp
     </section>
   );
 };
+

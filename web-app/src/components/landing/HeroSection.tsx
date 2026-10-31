@@ -107,3 +107,4 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenApp, onContactCl
     </section>
   );
 };
+

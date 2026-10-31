@@ -4,7 +4,7 @@ import { QueryConsole } from './components/dashboard/QueryConsole';
 import { ConnectionModal } from './components/dashboard/ConnectionModal';
 import { MarketplaceModal } from './components/dashboard/MarketplaceModal';
 import { Strategy } from './types';
-import { ArrowLeft, Database, Sparkles, Terminal } from 'lucide-react';
+import { ArrowLeft, Database, Sparkles } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'dashboard'>('landing');
@@ -84,3 +84,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+

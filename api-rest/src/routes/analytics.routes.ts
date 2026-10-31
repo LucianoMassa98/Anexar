@@ -11,3 +11,4 @@ router.post('/schema', uploadMiddleware.array('files', 5), AnalyticsController.g
 router.post('/query', uploadMiddleware.array('files', 5), AnalyticsController.executeAnalyticsQuery);
 
 export default router;
+

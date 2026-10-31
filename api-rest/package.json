@@ -4,9 +4,9 @@
   "description": "Backend API REST para Anexar - Plataforma Text-to-SQL con Zero-Retention y Embudo B2B",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "prisma generate && tsx watch src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "postinstall": "prisma generate",
-    "build": "prisma generate && tsc",
+    "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

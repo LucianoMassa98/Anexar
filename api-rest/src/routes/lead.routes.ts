@@ -7,3 +7,4 @@ router.post('/', LeadController.captureLead);
 router.get('/', LeadController.listLeads);
 
 export default router;
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, HardDrive, Cpu, Calendar, Lock, GitFork } from 'lucide-react';
+import { ShieldCheck, Calendar, Lock, GitFork } from 'lucide-react';
 
 export const ArchitectureShowcase: React.FC = () => {
   return (
@@ -82,3 +82,4 @@ export const ArchitectureShowcase: React.FC = () => {
     </section>
   );
 };
+

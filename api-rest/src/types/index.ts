@@ -65,11 +65,17 @@ export interface SqlServerConnectionConfig {
   password?: string;
 }
 
+export interface MongoConnectionConfig {
+  engine: 'mongodb';
+  uri?: string;
+}
+
 export type ConnectionConfig =
   | PostgresConnectionConfig
   | MemoryFileConnectionConfig
   | MySQLConnectionConfig
-  | SqlServerConnectionConfig;
+  | SqlServerConnectionConfig
+  | MongoConnectionConfig;
 
 export interface FirewallValidationResult {
   isValid: boolean;
@@ -92,3 +98,4 @@ export interface ThresholdEvaluationResult {
   thresholdValue: number;
   message: string;
 }
+

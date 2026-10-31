@@ -273,3 +273,4 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
     </div>
   );
 };
+

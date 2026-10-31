@@ -35,3 +35,4 @@ export interface DatabaseAdapter {
    */
   getDialect(): 'postgresql' | 'sqlite' | 'mysql' | 'transactsql';
 }
+

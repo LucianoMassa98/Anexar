@@ -91,3 +91,4 @@ export interface LeadFormData {
   needType: 'CENTRALIZATION' | 'AI_ANALYTICS' | 'FINANCIAL_AUDIT' | 'ERP_MIGRATION' | 'GENERAL_CONSULTING';
   message?: string;
 }
+

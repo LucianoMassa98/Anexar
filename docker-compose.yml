@@ -70,3 +70,4 @@ volumes:
 networks:
   anexar-network:
     driver: bridge
+
