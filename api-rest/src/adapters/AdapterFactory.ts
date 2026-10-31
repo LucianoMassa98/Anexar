@@ -1,6 +1,7 @@
 import { DatabaseAdapter } from './DatabaseAdapter';
 import { PostgresAdapter } from './PostgresAdapter';
 import { MemoryFileAdapter } from './MemoryFileAdapter';
+import { MySqlAdapter } from './MySqlAdapter';
 import { ConnectionConfig } from '../types';
 
 /**
@@ -22,10 +23,7 @@ export class AdapterFactory {
         return new MemoryFileAdapter(config);
 
       case 'mysql':
-        // Architectural extensibility: MySQL driver hook
-        throw new Error(
-          'MySQL Adapter is ready for integration. Install mysql2 and instantiate MySQLAdapter(config).'
-        );
+        return new MySqlAdapter(config);
 
       case 'sqlserver':
         // Architectural extensibility: SQL Server (mssql) driver hook

@@ -44,7 +44,12 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
     disconnect,
   } = useConnectionStore();
 
-  const [selectedTab, setSelectedTab] = useState<'memory-file' | 'postgres'>(engine);
+  const [selectedTab, setSelectedTab] = useState<'memory-file' | 'database'>(
+    engine === 'memory-file' ? 'memory-file' : 'database'
+  );
+  const [selectedDbEngine, setSelectedDbEngine] = useState<'postgres' | 'mysql'>(
+    engine === 'mysql' ? 'mysql' : 'postgres'
+  );
   const [previewFile, setPreviewFile] = useState<PreviewFileData | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -78,7 +83,11 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
   };
 
   const handleConnect = async () => {
-    setEngine(selectedTab);
+    if (selectedTab === 'memory-file') {
+      setEngine('memory-file');
+    } else {
+      setEngine(selectedDbEngine);
+    }
     const success = await connect();
     if (success) {
       onClose();
@@ -190,17 +199,17 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
           </button>
           <button
             onClick={() => {
-              setSelectedTab('postgres');
+              setSelectedTab('database');
               setPreviewFile(null);
             }}
             className={`flex-1 py-3 px-4 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
-              selectedTab === 'postgres'
+              selectedTab === 'database'
                 ? 'text-blue-400 border-b-2 border-blue-500 bg-slate-800/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>PostgreSQL (Adapter Directo)</span>
+            <span>Conecta tu base de datos</span>
           </button>
         </div>
 
@@ -392,84 +401,92 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
               )}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
-                  Host / Servidor
+                <label className="block text-xs font-semibold text-slate-300 mb-2">
+                  Seleccione su motor de base de datos
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDbEngine('postgres')}
+                    className={`p-3.5 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                      selectedDbEngine === 'postgres'
+                        ? 'border-blue-500 bg-blue-500/10 text-white shadow-sm shadow-blue-500/15'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs border border-blue-500/20">
+                        PG
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-white">PostgreSQL</p>
+                        <p className="text-[10px] text-slate-400">Puerto por defecto: 5432</p>
+                      </div>
+                    </div>
+                    {selectedDbEngine === 'postgres' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-400" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDbEngine('mysql')}
+                    className={`p-3.5 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                      selectedDbEngine === 'mysql'
+                        ? 'border-blue-500 bg-blue-500/10 text-white shadow-sm shadow-blue-500/15'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold text-xs border border-cyan-500/20">
+                        MY
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-white">MySQL</p>
+                        <p className="text-[10px] text-slate-400">Puerto por defecto: 3306</p>
+                      </div>
+                    </div>
+                    {selectedDbEngine === 'mysql' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  URL pública
                 </label>
                 <input
                   type="text"
-                  placeholder="ej. db.miempresa.com o localhost"
-                  value={postgresCreds.host || ''}
-                  onChange={(e) => setPostgresCreds({ host: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
+                  placeholder={
+                    selectedDbEngine === 'postgres'
+                      ? 'postgresql://usuario:contraseña@servidor.com:5432/nombre_bd?sslmode=require'
+                      : 'mysql://usuario:contraseña@servidor.com:3306/nombre_bd'
+                  }
+                  value={postgresCreds.connectionString || ''}
+                  onChange={(e) => setPostgresCreds({ connectionString: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                 />
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  Ingrese la cadena de conexión URI provista por su servicio de hosting (Railway, Supabase, Neon, AWS RDS, PlanetScale, etc.).
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
-                    Puerto
-                  </label>
-                  <input
-                    type="number"
-                    value={postgresCreds.port || 5432}
-                    onChange={(e) => setPostgresCreds({ port: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
+              {/* Recomendación de seguridad */}
+              <div className="p-3.5 rounded-xl bg-blue-950/40 border border-blue-500/30 text-slate-300 text-xs space-y-1.5">
+                <div className="flex items-center gap-2 text-blue-400 font-semibold text-xs">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>Recomendación de Seguridad</span>
                 </div>
-                <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
-                    Base de Datos
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="erp_produccion"
-                    value={postgresCreds.database || ''}
-                    onChange={(e) => setPostgresCreds({ database: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
-                    Usuario
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="readonly_user"
-                    value={postgresCreds.user || ''}
-                    onChange={(e) => setPostgresCreds({ user: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
-                    Contraseña
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={postgresCreds.password || ''}
-                    onChange={(e) => setPostgresCreds({ password: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="ssl-checkbox"
-                  checked={postgresCreds.ssl || false}
-                  onChange={(e) => setPostgresCreds({ ssl: e.target.checked })}
-                  className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0"
-                />
-                <label htmlFor="ssl-checkbox" className="text-xs text-slate-300 cursor-pointer">
-                  Habilitar conexión segura SSL (Recomendado para servidores remotos)
-                </label>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Por su propia seguridad y confidencialidad, le recomendamos utilizar y conectar bases de datos que <strong>no pertenezcan a entornos controlados o críticos de producción</strong> (sugerimos réplicas de sólo lectura, entornos de prueba, staging o copias anonimizadas).
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  * Anexar ejecuta todas las consultas bajo transacciones estrictas de <code className="text-blue-300">READ ONLY</code> y nunca almacena sus credenciales ni sus datos (política Zero-Retention).
+                </p>
               </div>
             </div>
           )}
@@ -497,7 +514,11 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
             </button>
             <button
               onClick={handleConnect}
-              disabled={isLoading || (selectedTab === 'memory-file' && ephemeralFiles.length === 0)}
+              disabled={
+                isLoading ||
+                (selectedTab === 'memory-file' && ephemeralFiles.length === 0) ||
+                (selectedTab === 'database' && !postgresCreds.connectionString?.trim())
+              }
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50 transition-colors"
             >
               {isLoading ? (

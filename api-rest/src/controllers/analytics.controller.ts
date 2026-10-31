@@ -5,11 +5,11 @@ import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { SqlFirewall } from '../firewall/SqlFirewall';
 import { TextToSqlService } from '../services/textToSql.service';
 import { ThresholdEvaluator } from '../services/thresholdEvaluator.service';
-import { ConnectionConfig, PostgresConnectionConfig, MemoryFileConnectionConfig } from '../types';
+import { ConnectionConfig, PostgresConnectionConfig, MemoryFileConnectionConfig, MySQLConnectionConfig } from '../types';
 
 // Zod validation schemas
-const postgresConfigSchema = z.object({
-  engine: z.literal('postgres'),
+const dbConfigSchema = z.object({
+  engine: z.enum(['postgres', 'mysql']).default('postgres'),
   connectionString: z.string().optional(),
   host: z.string().optional(),
   port: z.union([z.number(), z.string().transform(Number)]).optional(),
@@ -22,8 +22,8 @@ const postgresConfigSchema = z.object({
 const queryBodySchema = z.object({
   prompt: z.string().optional(),
   sql: z.string().optional(),
-  engine: z.enum(['postgres', 'memory-file']).default('postgres'),
-  connectionConfig: postgresConfigSchema.optional(),
+  engine: z.enum(['postgres', 'mysql', 'memory-file']).default('postgres'),
+  connectionConfig: dbConfigSchema.optional(),
   threshold: z
     .object({
       conditionMetric: z.string(),
@@ -187,7 +187,7 @@ export class AnalyticsController {
    */
   private static resolveConnectionConfig(
     req: Request,
-    explicitConfig?: PostgresConnectionConfig
+    explicitConfig?: PostgresConnectionConfig | MySQLConnectionConfig
   ): ConnectionConfig {
     const files = req.files as Express.Multer.File[] | undefined;
     const singleFile = req.file as Express.Multer.File | undefined;
@@ -206,13 +206,31 @@ export class AnalyticsController {
       return memoryConfig;
     }
 
-    // Check if Postgres config passed explicitly
-    if (explicitConfig && explicitConfig.engine === 'postgres') {
+    // Check if explicit config passed
+    if (explicitConfig) {
       return explicitConfig;
     }
 
-    // Check request body for postgres parameters
+    const engineType =
+      req.body.engine === 'mysql' || (req.body.connectionString && req.body.connectionString.startsWith('mysql://'))
+        ? 'mysql'
+        : 'postgres';
+
+    // Check request body for connection string or host parameters
     if (req.body.connectionString || req.body.host) {
+      if (engineType === 'mysql') {
+        return {
+          engine: 'mysql',
+          connectionString: req.body.connectionString,
+          host: req.body.host,
+          port: req.body.port ? Number(req.body.port) : 3306,
+          database: req.body.database,
+          user: req.body.user,
+          password: req.body.password,
+          ssl: req.body.ssl === true || req.body.ssl === 'true',
+        };
+      }
+
       return {
         engine: 'postgres',
         connectionString: req.body.connectionString,
@@ -226,21 +244,18 @@ export class AnalyticsController {
     }
 
     // Check encrypted/base64 headers if client transmitted ephemeral creds via header
-    const headerConn = req.headers['x-anexar-postgres-conn'];
+    const headerConn = req.headers['x-anexar-postgres-conn'] || req.headers['x-anexar-db-conn'];
     if (typeof headerConn === 'string') {
       try {
         const decoded = JSON.parse(Buffer.from(headerConn, 'base64').toString('utf-8'));
-        return {
-          engine: 'postgres',
-          ...decoded,
-        };
+        return decoded;
       } catch {
         // ignore
       }
     }
 
     throw new Error(
-      'No se proporcionaron credenciales efímeras ni archivos para la conexión. Por favor especifique una conexión a PostgreSQL o adjunte un archivo CSV/Excel.'
+      'No se proporcionaron credenciales efímeras ni archivos para la conexión. Por favor especifique una URL pública de PostgreSQL / MySQL o adjunte un archivo CSV/Excel.'
     );
   }
 }

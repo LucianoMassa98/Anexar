@@ -50,11 +50,13 @@ export interface MemoryFileConnectionConfig {
 // Future adapters
 export interface MySQLConnectionConfig {
   engine: 'mysql';
+  connectionString?: string;
   host?: string;
   port?: number;
   database?: string;
   user?: string;
   password?: string;
+  ssl?: boolean;
 }
 
 export interface SqlServerConnectionConfig {

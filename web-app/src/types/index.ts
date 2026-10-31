@@ -1,4 +1,4 @@
-export type EngineType = 'postgres' | 'memory-file';
+export type EngineType = 'postgres' | 'mysql' | 'memory-file';
 
 export interface PostgresCredentials {
   connectionString?: string;

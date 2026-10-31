@@ -99,6 +99,8 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
                   {isConnected
                     ? engine === 'memory-file'
                       ? `Archivos en Memoria (${ephemeralFiles.length} cargados)`
+                      : engine === 'mysql'
+                      ? 'MySQL Activo'
                       : 'PostgreSQL Activo'
                     : 'Sin Fuente Conectada'}
                 </span>

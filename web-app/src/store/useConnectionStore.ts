@@ -87,11 +87,16 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
           body: formData,
         });
       } else {
+        if (!postgresCreds.connectionString?.trim() && !postgresCreds.host?.trim()) {
+          throw new Error('Debe ingresar la URL pública de la base de datos.');
+        }
+
         response = await fetch(`${apiUrl}/api/analytics/schema`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            engine: 'postgres',
+            engine,
+            connectionString: postgresCreds.connectionString?.trim(),
             ...postgresCreds,
           }),
         });

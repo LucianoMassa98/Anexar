@@ -87,9 +87,10 @@ export const useStrategyStore = create<StrategyStoreState>((set) => ({
           body: JSON.stringify({
             prompt,
             sql,
-            engine: 'postgres',
+            engine: conn.engine,
             connectionConfig: {
-              engine: 'postgres',
+              engine: conn.engine,
+              connectionString: conn.postgresCreds.connectionString?.trim(),
               ...conn.postgresCreds,
             },
             threshold,
