@@ -14,9 +14,21 @@ export class TextToSqlService {
   private static genAI = env.GEMINI_API_KEY ? new GoogleGenerativeAI(env.GEMINI_API_KEY) : null;
   private static openai = env.OPENAI_API_KEY ? createOpenAI({ apiKey: env.OPENAI_API_KEY }) : null;
 
+  private static getGeminiModelsToTry(): string[] {
+    const list = [
+      env.GEMINI_MODEL,
+      'gemini-3-flash-preview',
+      'gemini-3.1-flash-lite-preview',
+      'gemini-3.1-flash-lite',
+      'gemini-flash-latest',
+      'gemini-3.8-flash',
+    ].filter(Boolean) as string[];
+    return Array.from(new Set(list));
+  }
+
   public static getActiveProvider(): string {
     if (env.GEMINI_API_KEY && (env.LLM_PROVIDER === 'gemini' || env.LLM_PROVIDER === 'auto')) {
-      return `Google Gemini (${env.GEMINI_MODEL})`;
+      return `Google Gemini (${env.GEMINI_MODEL || 'gemini-3-flash-preview'})`;
     }
     if (env.OPENAI_API_KEY && (env.LLM_PROVIDER === 'openai' || env.LLM_PROVIDER === 'auto')) {
       return `OpenAI (${env.OPENAI_MODEL})`;
@@ -62,12 +74,12 @@ DATABASE SCHEMA:
 ${formattedSchema || 'No explicit schema provided. Use standard SQL financial naming conventions.'}
 
 CRITICAL RULES:
-1. Generate ONLY valid, executable SELECT queries.
+1. Generate EXACTLY ONE valid, executable SELECT query. Do NOT generate multiple statements or semicolons.
 2. NEVER generate INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, or CREATE statements.
 3. Use proper column aliases and aggregation functions (SUM, AVG, COUNT, MIN, MAX, ROUND).
 4. If working with SQLite, quote table and column names with double quotes ("table_name", "column_name").
-5. If working with PostgreSQL, respect table and column casing.
-6. Format the query cleanly.
+5. If working with PostgreSQL, respect table and column casing. If any table or column name contains spaces or hyphens (e.g. "remitos de ventas"), you MUST wrap it in double quotes.
+6. Format the query cleanly without trailing semicolons.
 7. Provide a concise 1-2 sentence explanation of the metrics calculated.
 
 Format your response exactly as:
@@ -77,31 +89,35 @@ SELECT ...
 Explanation: <brief business context>
 `.trim();
 
-    // 1. Prioritize Google Gemini API
+    // 1. Prioritize Google Gemini API with intelligent model fallback
     if (this.genAI && env.GEMINI_API_KEY && (env.LLM_PROVIDER === 'gemini' || env.LLM_PROVIDER === 'auto')) {
-      try {
-        const model = this.genAI.getGenerativeModel({
-          model: env.GEMINI_MODEL || 'gemini-1.5-flash',
-          generationConfig: {
-            temperature: 0.1, // Deterministic, highly accurate SQL
-          },
-        });
+      const models = this.getGeminiModelsToTry();
+      for (const modelName of models) {
+        try {
+          const model = this.genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              temperature: 0.1, // Deterministic, highly accurate SQL
+            },
+          });
 
-        const promptCombined = `${systemPrompt}\n\nUSER CONSULTATION / REQUERIMIENTO:\n"${userPrompt}"`;
-        const result = await model.generateContent(promptCombined);
-        const text = result.response.text();
+          const promptCombined = `${systemPrompt}\n\nUSER CONSULTATION / REQUERIMIENTO:\n"${userPrompt}"`;
+          const result = await model.generateContent(promptCombined);
+          const text = result.response.text();
 
-        const sqlMatch = text.match(/```sql([\s\S]*?)```/i) || text.match(/```([\s\S]*?)```/i);
-        const sql = sqlMatch ? sqlMatch[1].trim() : text.trim();
+          const sqlMatch = text.match(/```sql([\s\S]*?)```/i) || text.match(/```([\s\S]*?)```/i);
+          let sql = sqlMatch ? sqlMatch[1].trim() : text.trim();
+          sql = sql.replace(/;\s*$/, '').trim();
 
-        const explanationMatch = text.split(/```/)[2];
-        const explanation = explanationMatch
-          ? explanationMatch.replace(/^Explanation:\s*/i, '').trim()
-          : 'Consulta SQL analítica generada con Google Gemini.';
+          const explanationMatch = text.split(/```/)[2];
+          const explanation = explanationMatch
+            ? explanationMatch.replace(/^Explanation:\s*/i, '').trim()
+            : `Consulta SQL analítica generada con Google Gemini (${modelName}).`;
 
-        return { sql, explanation };
-      } catch (err: any) {
-        console.warn(`[TextToSqlService] Google Gemini API error: ${err.message}. Trying OpenAI or fallback...`);
+          return { sql, explanation };
+        } catch (err: any) {
+          console.warn(`[TextToSqlService] Google Gemini (${modelName}) error: ${err.message}. Trying next candidate model...`);
+        }
       }
     }
 
@@ -187,19 +203,22 @@ Por favor genera un INFORME EJECUTIVO PROFESIONAL y riguroso en formato Markdown
 (2 o 3 sugerencias concretas y financieras para la toma de decisiones gerenciales)
 `.trim();
 
-    // 1. Try Google Gemini API
+    // 1. Try Google Gemini API with candidate models
     if (this.genAI && env.GEMINI_API_KEY && (env.LLM_PROVIDER === 'gemini' || env.LLM_PROVIDER === 'auto')) {
-      try {
-        const model = this.genAI.getGenerativeModel({
-          model: env.GEMINI_MODEL || 'gemini-1.5-flash',
-          generationConfig: {
-            temperature: 0.2,
-          },
-        });
-        const result = await model.generateContent(reportPrompt);
-        return result.response.text();
-      } catch (err: any) {
-        console.warn(`[TextToSqlService] Google Gemini Report generation error: ${err.message}`);
+      const models = this.getGeminiModelsToTry();
+      for (const modelName of models) {
+        try {
+          const model = this.genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              temperature: 0.2,
+            },
+          });
+          const result = await model.generateContent(reportPrompt);
+          return result.response.text();
+        } catch (err: any) {
+          console.warn(`[TextToSqlService] Google Gemini (${modelName}) Report generation error: ${err.message}`);
+        }
       }
     }
 
@@ -243,34 +262,62 @@ Se ejecutó con éxito la consulta sobre la base de datos PostgreSQL, analizando
     const cols = schema[0]?.columns || [];
     const colNames = cols.map((c) => c.name);
 
-    const quote = (name: string) => (dialect === 'sqlite' ? `"${name}"` : name);
+    // If table name contains spaces, hyphens, or is reserved, ALWAYS quote with double quotes
+    const quote = (name: string) => {
+      if (!name) return '';
+      if (name.includes(' ') || name.includes('-') || dialect === 'sqlite' || dialect === 'postgresql') {
+        return `"${name}"`;
+      }
+      return name;
+    };
+
+    // Sales by period / remitos / comprobantes pattern
+    if (
+      lowerPrompt.includes('venta') ||
+      lowerPrompt.includes('periodo') ||
+      lowerPrompt.includes('remito') ||
+      lowerPrompt.includes('comprobante')
+    ) {
+      const targetTable =
+        schema.find(
+          (t) =>
+            t.tableName.toLowerCase().includes('comprobante') ||
+            t.tableName.toLowerCase().includes('venta') ||
+            t.tableName.toLowerCase().includes('remito')
+        )?.tableName || firstTable;
+
+      return {
+        sql: `SELECT \n  ${quote('periodo') || "'2025-Q1'"} AS periodo,\n  COUNT(*) AS total_documentos,\n  SUM(total) AS total_ventas\nFROM ${quote(targetTable)}\nGROUP BY 1\nORDER BY 1 DESC`,
+        explanation: `Consolidación de ventas y cantidad de comprobantes por período sobre la entidad ${targetTable}.`,
+      };
+    }
 
     // Common KPI patterns
     if (lowerPrompt.includes('ebitda') || lowerPrompt.includes('margen') || lowerPrompt.includes('operativo')) {
       return {
-        sql: `SELECT \n  ${quote('periodo') || "'2025-Q1'"} AS periodo,\n  SUM(ingresos_operativos) AS ingresos_totales,\n  SUM(costo_ventas) AS costo_mercaderias,\n  SUM(gastos_admin + gastos_comercializacion) AS opex,\n  ROUND((SUM(ingresos_operativos - costo_ventas - gastos_admin - gastos_comercializacion) / NULLIF(SUM(ingresos_operativos), 0)) * 100, 2) AS margen_ebitda\nFROM ${quote(firstTable)}\nGROUP BY 1\nORDER BY 1 DESC;`,
+        sql: `SELECT \n  ${quote('periodo') || "'2025-Q1'"} AS periodo,\n  SUM(ingresos_operativos) AS ingresos_totales,\n  SUM(costo_ventas) AS costo_mercaderias,\n  SUM(gastos_admin + gastos_comercializacion) AS opex,\n  ROUND((SUM(ingresos_operativos - costo_ventas - gastos_admin - gastos_comercializacion) / NULLIF(SUM(ingresos_operativos), 0)) * 100, 2) AS margen_ebitda\nFROM ${quote(firstTable)}\nGROUP BY 1\nORDER BY 1 DESC`,
         explanation: 'Cálculo de EBITDA y margen operativo porcentual proyectado por período.',
       };
     }
 
     if (lowerPrompt.includes('aging') || lowerPrompt.includes('cobrar') || lowerPrompt.includes('mora')) {
       return {
-        sql: `SELECT \n  cliente,\n  SUM(CASE WHEN dias_mora <= 30 THEN saldo ELSE 0 END) AS corriente_30d,\n  SUM(CASE WHEN dias_mora BETWEEN 31 AND 60 THEN saldo ELSE 0 END) AS mora_31_60d,\n  SUM(CASE WHEN dias_mora BETWEEN 61 AND 90 THEN saldo ELSE 0 END) AS mora_61_90d,\n  SUM(CASE WHEN dias_mora > 90 THEN saldo ELSE 0 END) AS mora_critica_mas90d,\n  SUM(saldo) AS deuda_total\nFROM ${quote(firstTable)}\nGROUP BY cliente\nORDER BY deuda_total DESC\nLIMIT 20;`,
+        sql: `SELECT \n  cliente,\n  SUM(CASE WHEN dias_mora <= 30 THEN saldo ELSE 0 END) AS corriente_30d,\n  SUM(CASE WHEN dias_mora BETWEEN 31 AND 60 THEN saldo ELSE 0 END) AS mora_31_60d,\n  SUM(CASE WHEN dias_mora BETWEEN 61 AND 90 THEN saldo ELSE 0 END) AS mora_61_90d,\n  SUM(CASE WHEN dias_mora > 90 THEN saldo ELSE 0 END) AS mora_critica_mas90d,\n  SUM(saldo) AS deuda_total\nFROM ${quote(firstTable)}\nGROUP BY cliente\nORDER BY deuda_total DESC\nLIMIT 20`,
         explanation: 'Estratificación por antigüedad de saldos (Aging) de créditos por cobrar.',
       };
     }
 
     if (lowerPrompt.includes('rotacion') || lowerPrompt.includes('inventario') || lowerPrompt.includes('stock')) {
       return {
-        sql: `SELECT \n  categoria_producto,\n  SUM(costo_ventas_anual) AS costo_anual,\n  AVG(stock_valorizado) AS stock_promedio,\n  ROUND(SUM(costo_ventas_anual) / NULLIF(AVG(stock_valorizado), 0), 2) AS rotacion_inventario,\n  ROUND((AVG(stock_valorizado) / NULLIF(SUM(costo_ventas_anual), 0)) * 365, 0) AS dias_calle_inventario\nFROM ${quote(firstTable)}\nGROUP BY categoria_producto\nORDER BY rotacion_inventario ASC;`,
+        sql: `SELECT \n  categoria_producto,\n  SUM(costo_ventas_anual) AS costo_anual,\n  AVG(stock_valorizado) AS stock_promedio,\n  ROUND(SUM(costo_ventas_anual) / NULLIF(AVG(stock_valorizado), 0), 2) AS rotacion_inventario,\n  ROUND((AVG(stock_valorizado) / NULLIF(SUM(costo_ventas_anual), 0)) * 365, 0) AS dias_calle_inventario\nFROM ${quote(firstTable)}\nGROUP BY categoria_producto\nORDER BY rotacion_inventario ASC`,
         explanation: 'Rotación de inventario anual y cálculo de días promedio de permanencia en stock (DSI).',
       };
     }
 
     // Default overview query
-    const sampleCols = colNames.slice(0, 5).map(quote).join(', ') || '*';
+    const sampleCols = colNames.length > 0 ? colNames.slice(0, 5).map(quote).join(', ') : '*';
     return {
-      sql: `SELECT ${sampleCols}\nFROM ${quote(firstTable)}\nLIMIT 50;`,
+      sql: `SELECT ${sampleCols}\nFROM ${quote(firstTable)}\nLIMIT 50`,
       explanation: `Exploración preliminar de las primeras 50 filas de la entidad ${firstTable}.`,
     };
   }

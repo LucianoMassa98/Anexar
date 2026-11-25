@@ -103,7 +103,15 @@ export const useStrategyStore = create<StrategyStoreState>((set) => ({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Error al ejecutar la consulta analítica.');
+        const errorDetails = data.details
+          ? typeof data.details === 'string'
+            ? data.details
+            : JSON.stringify(data.details)
+          : '';
+        const errorMessage = errorDetails
+          ? `${data.error || 'Error en la ejecución analítica'}: ${errorDetails}`
+          : (data.error || 'Error al ejecutar la consulta analítica.');
+        throw new Error(errorMessage);
       }
 
       set({

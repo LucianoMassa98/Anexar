@@ -56,18 +56,21 @@ export class SqlFirewall {
     sql: string,
     dialect: 'postgresql' | 'sqlite' | 'mysql' | 'transactsql' = 'postgresql'
   ): FirewallValidationResult {
-    const trimmed = sql.trim();
+    let trimmed = sql.trim();
 
     if (!trimmed) {
       return { isValid: false, error: 'SQL query cannot be empty.' };
     }
+
+    // Strip trailing semicolon to ensure clean single-statement parsing
+    trimmed = trimmed.replace(/;\s*$/, '').trim();
 
     // 1. Secondary regex scan for dangerous functions/patterns
     for (const pattern of this.DANGEROUS_PATTERNS) {
       if (pattern.test(trimmed)) {
         return {
           isValid: false,
-          error: `SQL Firewall blocked query containing potentially hazardous pattern: ${pattern.source}`,
+          error: `SQL Firewall bloqueó la consulta por contener patrón potencialmente peligroso: ${pattern.source}`,
         };
       }
     }
@@ -83,9 +86,21 @@ export class SqlFirewall {
       try {
         ast = this.parser.astify(trimmed);
       } catch (fallbackError: any) {
+        // Fallback: If node-sql-parser failed on valid Postgres constructs (e.g. ::date casting or functions),
+        // verify strictly that the query begins with SELECT / WITH and contains zero forbidden keywords
+        const isSelectOnly = /^\s*(WITH\s+[\s\S]+?\s+)?SELECT\s+[\s\S]+/i.test(trimmed);
+        const hasMutations = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|REPLACE|MERGE|GRANT|REVOKE|EXEC|EXECUTE)\b/i.test(trimmed);
+
+        if (isSelectOnly && !hasMutations) {
+          return {
+            isValid: true,
+            statementType: 'select',
+          };
+        }
+
         return {
           isValid: false,
-          error: `SQL Syntax parsing error: ${parseError.message || fallbackError.message}`,
+          error: `Error de sintaxis SQL en Firewall: ${parseError.message || fallbackError.message}`,
         };
       }
     }

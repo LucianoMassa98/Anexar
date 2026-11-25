@@ -144,7 +144,7 @@ export class AnalyticsController {
       if (!firewallCheck.isValid) {
         res.status(403).json({
           success: false,
-          error: 'Violación de Seguridad en SQL Firewall: La consulta no cumple con la política de sólo lectura.',
+          error: firewallCheck.error || 'Violación de Seguridad en SQL Firewall: La consulta no cumple con la política de sólo lectura.',
           details: firewallCheck.error,
           sqlAttempted: targetSql,
         });
