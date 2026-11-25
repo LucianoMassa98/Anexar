@@ -139,8 +139,13 @@ export class SqlFirewall {
         };
       }
 
-      // Check for SELECT ... INTO (which writes tables)
-      if (stmt.into) {
+      // Check for SELECT ... INTO (which writes tables).
+      // Note: node-sql-parser sets stmt.into = { position: null } for normal SELECTs,
+      // so we must verify position !== null or expr / type === 'into'.
+      const hasIntoTarget = Boolean(
+        stmt.into && (stmt.into.position !== null || stmt.into.type === 'into' || stmt.into.expr)
+      );
+      if (hasIntoTarget) {
         return {
           isValid: false,
           error: 'SELECT ... INTO statements are forbidden because they mutate schema state.',
