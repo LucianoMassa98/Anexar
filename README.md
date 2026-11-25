@@ -129,6 +129,17 @@ Antes de tocar cualquier motor de base de datos, toda consulta generada por el L
 - Prohíbe consultas múltiples o encadenadas por punto y coma (prevención de stacked queries).
 - Filtra funciones y procedimientos peligrosos (`pg_sleep`, `xp_cmdshell`, `INTO OUTFILE`).
 
+### 2.4. Motor de Inferencia Gemini & Informes Ejecutivos Automatizados
+La plataforma integra **Google Gemini** (`gemini-1.5-flash`) de forma nativa a través de `@google/generative-ai`:
+- **Text-to-SQL Inteligente:** Traduce preguntas en lenguaje natural al dialecto específico (PostgreSQL o SQLite) evaluando los esquemas introspeccionados en tiempo real con temperatura 0.1.
+- **Generación de Informes Ejecutivos de Negocio:** Tras ejecutar la consulta de solo lectura sobre cualquier base de datos PostgreSQL conectada, analiza cuantitativamente los registros devueltos para redactar un informe ejecutivo estructurado en Markdown que incluye:
+  1. *Resumen Ejecutivo:* Síntesis cuantitativa del comportamiento de los datos.
+  2. *Hallazgos Principales:* Patrones, anomalías, concentraciones (Pareto) o dispersiones relevantes.
+  3. *Riesgos & Oportunidades:* Diagnóstico financiero, operativo o fiscal.
+  4. *Recomendaciones Estratégicas de ANEXAR:* Pasos accionables y propuesta de valor de consultoría.
+- **Resiliencia Multi-Proveedor:** Arquitectura en cascada (Google Gemini -> OpenAI GPT-4o -> Motor Heurístico Offline).
+- **Zero-Retention Garantizado:** Ni el prompt ni las filas analizadas por el modelo son persistidos en la base de datos interna.
+
 ---
 
 ## 📊 3. Estrategias, Comunidad y Marketplace
@@ -192,7 +203,13 @@ DATABASE_URL="postgresql://anexar_admin:anexar_secret_key_2026@localhost:5432/an
 JWT_SECRET="anexar_super_secret_jwt_key_at_least_32_characters"
 JWT_EXPIRES_IN="7d"
 
-# Inteligencia Artificial (Vercel AI SDK)
+# Inteligencia Artificial & Motor LLM Multi-Proveedor (Gemini / OpenAI)
+# GEMINI_API_KEY: Motor principal para Text-to-SQL e Informes Ejecutivos Estratégicos
+GEMINI_API_KEY="AIzaSy... o tu API Key de Google AI Studio"
+GEMINI_MODEL="gemini-1.5-flash"
+LLM_PROVIDER="gemini"
+
+# OpenAI (Motor de Respaldo / Fallback)
 OPENAI_API_KEY="sk-proj-tu-api-key"
 OPENAI_MODEL="gpt-4o"
 

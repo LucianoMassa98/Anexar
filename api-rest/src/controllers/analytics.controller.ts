@@ -165,12 +165,29 @@ export class AnalyticsController {
         });
       }
 
-      // 6. Return response (Zero-Retention: no database or query data is written to internal Prisma DB)
+      // 6. Generate Executive AI Report (Zero-Retention: in-memory analysis via Gemini)
+      let report: string | null = null;
+      try {
+        if (queryResult.rows && queryResult.rows.length > 0) {
+          report = await TextToSqlService.generateExecutiveReport(
+            prompt || targetSql,
+            targetSql,
+            queryResult,
+            parsed.data.classification
+          );
+        }
+      } catch (reportErr: any) {
+        console.warn('[AnalyticsController] Warning: Executive report generation bypassed:', reportErr?.message);
+      }
+
+      // 7. Return response (Zero-Retention: no database or query data is written to internal Prisma DB)
       res.status(200).json({
         success: true,
         sql: targetSql,
         explanation,
         dialect,
+        llmProvider: TextToSqlService.getActiveProvider(),
+        report,
         results: {
           rows: queryResult.rows,
           fields: queryResult.fields,

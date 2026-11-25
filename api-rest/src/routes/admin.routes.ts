@@ -13,3 +13,4 @@ router.put('/strategies/:id', AdminController.updateStrategy);
 router.delete('/strategies/:id', AdminController.deleteStrategy);
 
 export default router;
+

@@ -47,6 +47,8 @@ export interface QueryResponse {
   sql: string;
   explanation: string;
   dialect: string;
+  llmProvider?: string;
+  report?: string | null;
   results: QueryResult;
   firewall: {
     status: string;

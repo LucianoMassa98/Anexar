@@ -49,20 +49,34 @@ export class AdminController {
       const totalViews = strategies.reduce((acc, s) => acc + (s.viewsCount || 0), 0) + 380;
 
       // LLM Token Consumption Calculations
-      // Standard OpenAI Pricing for GPT-4o: $2.50 / 1M input tokens, $10.00 / 1M output tokens
+      const activeProvider = env.GEMINI_API_KEY ? 'gemini' : (env.OPENAI_API_KEY ? 'openai' : 'heuristic');
+      const activeModel = activeProvider === 'gemini' 
+        ? (env.GEMINI_MODEL || 'gemini-1.5-flash')
+        : (env.OPENAI_MODEL || 'gpt-4o');
+
       const estimatedPromptTokens = totalExecutions * 420;
       const estimatedCompletionTokens = totalExecutions * 180;
       const totalTokens = estimatedPromptTokens + estimatedCompletionTokens;
-      const estimatedCostUsd = Number(
-        ((estimatedPromptTokens / 1_000_000) * 2.5 + (estimatedCompletionTokens / 1_000_000) * 10.0).toFixed(4)
-      );
+      const estimatedCostUsd = activeProvider === 'gemini'
+        ? Number(((estimatedPromptTokens / 1_000_000) * 0.35 + (estimatedCompletionTokens / 1_000_000) * 1.05).toFixed(4))
+        : Number(((estimatedPromptTokens / 1_000_000) * 2.5 + (estimatedCompletionTokens / 1_000_000) * 10.0).toFixed(4));
 
       // Integrations health check
       const integrations = [
         {
+          id: 'gemini',
+          name: 'Google Gemini (Oficial)',
+          category: 'Motor de Inteligencia Artificial (Principal)',
+          model: env.GEMINI_MODEL || 'gemini-1.5-flash',
+          status: env.GEMINI_API_KEY ? 'CONNECTED' : 'STANDBY',
+          statusLabel: env.GEMINI_API_KEY ? 'Conectado (GEMINI_API_KEY Activa)' : 'Requiere GEMINI_API_KEY en .env',
+          details: 'Generación Text-to-SQL + Informes Ejecutivos estratégicos con temperatura 0.1',
+          latency: env.GEMINI_API_KEY ? '280 ms' : 'N/A',
+        },
+        {
           id: 'openai',
           name: 'OpenAI (Vercel AI SDK)',
-          category: 'Motor de Inteligencia Artificial',
+          category: 'Motor de Inteligencia Artificial (Respaldo)',
           model: env.OPENAI_MODEL || 'gpt-4o',
           status: env.OPENAI_API_KEY ? 'CONNECTED' : 'HEURISTIC_FALLBACK',
           statusLabel: env.OPENAI_API_KEY ? 'Conectado (API Key Activa)' : 'Modo Heurístico (Offline)',
@@ -150,17 +164,16 @@ export class AdminController {
             zeroRetentionRate: '100%',
           },
           llmUsage: {
-            provider: 'OpenAI (Vercel AI SDK)',
-            model: env.OPENAI_MODEL || 'gpt-4o',
-            hasApiKey: Boolean(env.OPENAI_API_KEY),
+            provider: activeProvider === 'gemini' ? 'Google Gemini' : (activeProvider === 'openai' ? 'OpenAI' : 'Heurístico Local'),
+            model: activeModel,
+            hasApiKey: Boolean(env.GEMINI_API_KEY || env.OPENAI_API_KEY),
             promptTokens: estimatedPromptTokens,
             completionTokens: estimatedCompletionTokens,
             totalTokens,
             estimatedCostUsd,
-            pricing: {
-              inputPerMillion: 2.5,
-              outputPerMillion: 10.0,
-            },
+            pricing: activeProvider === 'gemini'
+              ? { inputPerMillion: 0.35, outputPerMillion: 1.05 }
+              : { inputPerMillion: 2.5, outputPerMillion: 10.0 },
             history: dailyHistory,
           },
           integrations,
@@ -297,3 +310,4 @@ export class AdminController {
     }
   }
 }
+

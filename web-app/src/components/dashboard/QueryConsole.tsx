@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Play,
   Terminal,
@@ -12,6 +12,8 @@ import {
   CheckCircle,
   Clock,
   FileSpreadsheet,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -32,6 +34,131 @@ interface QueryConsoleProps {
   onOpenMarketplaceModal: () => void;
 }
 
+const ReportViewer: React.FC<{
+  report: string;
+  onCopy: () => void;
+  copied: boolean;
+  provider?: string;
+}> = ({ report, onCopy, copied, provider }) => {
+  const lines = report.split('\n');
+
+  return (
+    <div className="space-y-4">
+      {/* Report Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>Informe Ejecutivo de Inteligencia Financiera</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                {provider || 'Google Gemini'}
+              </span>
+            </h4>
+            <p className="text-xs text-slate-400">
+              Análisis cuantitativo automatizado sobre los registros de la base de datos
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={onCopy}
+          className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-colors border border-slate-700 cursor-pointer"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400">¡Copiado al portapapeles!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5 text-slate-400" />
+              <span>Copiar Informe Completo</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Rendered Markdown Body */}
+      <div className="p-6 rounded-xl bg-slate-950/50 border border-slate-800/80 space-y-3 font-sans text-sm leading-relaxed text-slate-300">
+        {lines.map((line, idx) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return <div key={idx} className="h-1" />;
+          }
+
+          // Main Header (##)
+          if (trimmed.startsWith('## ')) {
+            return (
+              <h2
+                key={idx}
+                className="text-base font-bold text-white pt-3 pb-1 border-b border-slate-800 flex items-center gap-2"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span>{trimmed.replace(/^##\s*/, '')}</span>
+              </h2>
+            );
+          }
+
+          // Sub Header (###)
+          if (trimmed.startsWith('### ')) {
+            return (
+              <h3
+                key={idx}
+                className="text-sm font-semibold text-blue-300 pt-2 flex items-center gap-2"
+              >
+                <span>{trimmed.replace(/^###\s*/, '')}</span>
+              </h3>
+            );
+          }
+
+          // Bullet list items (- or *)
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            const content = trimmed.replace(/^[-*]\s*/, '');
+            const parts = content.split(/(\*\*.*?\*\*)/g);
+            return (
+              <div key={idx} className="flex items-start gap-2.5 pl-2 text-xs sm:text-sm text-slate-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0"></span>
+                <span>
+                  {parts.map((p, pIdx) => {
+                    if (p.startsWith('**') && p.endsWith('**')) {
+                      return (
+                        <strong key={pIdx} className="font-semibold text-white">
+                          {p.slice(2, -2)}
+                        </strong>
+                      );
+                    }
+                    return p;
+                  })}
+                </span>
+              </div>
+            );
+          }
+
+          // Normal paragraph with bold highlights
+          const parts = trimmed.split(/(\*\*.*?\*\*)/g);
+          return (
+            <p key={idx} className="text-xs sm:text-sm text-slate-300">
+              {parts.map((p, pIdx) => {
+                if (p.startsWith('**') && p.endsWith('**')) {
+                  return (
+                    <strong key={pIdx} className="font-semibold text-white">
+                      {p.slice(2, -2)}
+                    </strong>
+                  );
+                }
+                return p;
+              })}
+            </p>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export const QueryConsole: React.FC<QueryConsoleProps> = ({
   onOpenConnectModal,
   onOpenMarketplaceModal,
@@ -40,8 +167,23 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
   const { isExecuting, queryResponse, executeQuery, error } = useStrategyStore();
 
   const [promptInput, setPromptInput] = useState('');
-  const [activeView, setActiveView] = useState<'chart' | 'table'>('chart');
+  const [activeView, setActiveView] = useState<'report' | 'chart' | 'table'>('report');
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+  const [copiedReport, setCopiedReport] = useState(false);
+
+  useEffect(() => {
+    if (queryResponse?.report) {
+      setActiveView('report');
+    }
+  }, [queryResponse]);
+
+  const handleCopyReport = () => {
+    if (queryResponse?.report) {
+      navigator.clipboard.writeText(queryResponse.report);
+      setCopiedReport(true);
+      setTimeout(() => setCopiedReport(false), 2000);
+    }
+  };
 
   const getDynamicSuggestions = () => {
     const domain = classification?.dataDomain;
@@ -346,11 +488,17 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
         <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl space-y-4">
           {/* Status Header */}
           <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
                 <ShieldCheck className="w-4 h-4" />
                 <span>SQL Firewall: {queryResponse.firewall.policy}</span>
               </span>
+              {queryResponse.llmProvider && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                  <span>IA: {queryResponse.llmProvider}</span>
+                </span>
+              )}
               <span className="text-xs text-slate-400 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{queryResponse.results.executionTimeMs} ms</span>
@@ -361,6 +509,19 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
+              {queryResponse.report && (
+                <button
+                  onClick={() => setActiveView('report')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    activeView === 'report'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                  <span>Informe Ejecutivo</span>
+                </button>
+              )}
               <button
                 onClick={() => setActiveView('chart')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
@@ -421,7 +582,22 @@ export const QueryConsole: React.FC<QueryConsoleProps> = ({
 
           {/* Visualization Body */}
           <div className="p-6">
-            {activeView === 'chart' ? (
+            {activeView === 'report' ? (
+              queryResponse.report ? (
+                <ReportViewer
+                  report={queryResponse.report}
+                  onCopy={handleCopyReport}
+                  copied={copiedReport}
+                  provider={queryResponse.llmProvider}
+                />
+              ) : (
+                <div className="p-8 text-center rounded-xl bg-slate-950/60 border border-slate-800 text-slate-400">
+                  <Sparkles className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-white">No se generó informe ejecutivo</p>
+                  <p className="text-xs mt-1">La consulta no arrojó registros numéricos para elaborar recomendaciones.</p>
+                </div>
+              )
+            ) : activeView === 'chart' ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-300">
